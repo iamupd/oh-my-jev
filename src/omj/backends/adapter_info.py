@@ -21,7 +21,7 @@ def adapter_base(adapter_dir: str | Path) -> tuple[str, str] | None:
     Any other local path returns None. The revision is "" when unknown.
     """
     try:
-        raw = json.loads((Path(adapter_dir) / ADAPTER_CONFIG_FILE).read_text(encoding="utf-8"))
+        raw = json.loads((Path(adapter_dir).expanduser() / ADAPTER_CONFIG_FILE).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     base = str(raw.get("base_model_name_or_path") or "").strip()
@@ -39,7 +39,7 @@ def adapter_base_model(adapter_dir: str | Path) -> str | None:
     return base[0] if base else None
 
 
-def follow_adapter_base(backend: dict[str, Any], adapter: str | Path) -> str | None:
+def follow_adapter_base(backend: dict[str, Any], adapter: str | Path, vram_gb: float | None = None) -> str | None:
     """Point a semif backend section at the base model an explicitly given adapter was trained on.
 
     Mutates `backend` (a BackendSection dump) and returns a note for the user, or None when the
@@ -55,4 +55,8 @@ def follow_adapter_base(backend: dict[str, Any], adapter: str | Path) -> str | N
         return None
     previous = backend.get("model") or "(none)"
     backend["model"], backend["revision"] = model, revision
-    return f"Using {model} (the adapter's base model) instead of the configured {previous}."
+    if vram_gb is not None:
+        from omj.models.sizing import auto_quant
+
+        backend["quant"] = auto_quant(model, vram_gb)
+    return f"Using {model} (the adapter's base model, {backend.get('quant', 'bf16')}) instead of the configured {previous}."

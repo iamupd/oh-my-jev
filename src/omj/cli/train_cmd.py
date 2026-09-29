@@ -60,6 +60,28 @@ class TrainDeps:
     build_examples_from_records: Callable[..., tuple[list[Any], Any]] | None = None
 
 
+def _warn_benchmark_overlap(records: list[Any], label: str) -> None:
+    """Warn when training items share 8-word runs with a bundled evaluation suite (inflated scores)."""
+    import json
+    import re
+
+    from omj.bench.suites import load_suite
+
+    def grams(text: str) -> set[str]:
+        words = re.sub(r"[^\w\s]", " ", text.lower()).split()
+        return {" ".join(words[i:i + 8]) for i in range(len(words) - 7)}
+
+    def text(state: Any) -> str:
+        return state if isinstance(state, str) else json.dumps(state, ensure_ascii=False)
+
+    for suite in ("omj-holdout", "omj-smoke", "underdetermined"):
+        suite_grams = set().union(*(grams(text(item.state)) for item in load_suite(suite)))
+        hits = sum(1 for r in records if grams(text(r.state)) & suite_grams)
+        if hits:
+            print(f"warning: data.mix {label}: {hits} training records share 8-word runs with the {suite} suite; "
+                  f"scores on {suite} will be inflated", file=sys.stderr)
+
+
 def load_mix_records(recipe: Any) -> tuple[list[Any], list[Any]]:
     """Train/dev ``DecisionRecord``s for a mixed recipe, sampled per [[data.mix]] entry."""
     from omj.train.sources import balanced_sample, load_source
@@ -69,13 +91,21 @@ def load_mix_records(recipe: Any) -> tuple[list[Any], list[Any]]:
     dev: list[Any] = []
     for entry in recipe.data.mix:
         kwargs = {"locale": recipe.data.locale, "questions": list(recipe.data.questions)}
+        if entry.name == "jsonl":
+            kwargs["path"] = entry.path
+        label = entry.path or entry.name
         pool = load_source(entry.name, "train", **kwargs)
-        if len(pool) < entry.train_n:
+        if not pool:
+            raise OmjError(ErrorCode.E_CONFIG, f"data.mix {label}: no labelled training records")
+        want = entry.train_n if entry.train_n is not None else len(pool)
+        if len(pool) < want:
             raise OmjError(
                 ErrorCode.E_CONFIG,
-                f"data.mix {entry.name}: train_n={entry.train_n} exceeds the {len(pool)} available records",
+                f"data.mix {label}: train_n={want} exceeds the {len(pool)} available records",
             )
-        train.extend(balanced_sample(pool, entry.train_n, seed))
+        if entry.name == "jsonl":
+            _warn_benchmark_overlap(pool, label)
+        train.extend(balanced_sample(pool, want, seed))
         if entry.dev_n:
             dev_pool = load_source(entry.name, "dev", **kwargs)
             dev.extend(balanced_sample(dev_pool, min(entry.dev_n, len(dev_pool)), seed + 1))

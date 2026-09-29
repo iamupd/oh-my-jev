@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omj Reports</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%23101828%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%232c5be0%22/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --sunk: #f9fafb;
+  --ink: #101828; --ink2: #344054; --muted: #667085; --faint: #98a2b3;
+  --line: #e4e7ec; --line2: #d0d5dd; --track: #eef1f5;
+  --t0: #2c5be0; --t0-bg: #eef3ff; --t1: #e2762c;
+  --good: #067647; --good-bg: #ecfdf3;
+  --bad: #b42318; --bad-bg: #fef3f2;
+  --warn: #93370d; --warn-bg: #fffaeb;
+  --shadow: 0 1px 2px rgba(16,24,40,.05);
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Pretendard Variable", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c111d; --card: #161b26; --sunk: #121722;
+    --ink: #f5f5f6; --ink2: #cecfd2; --muted: #94969c; --faint: #6c737f;
+    --line: #262d3b; --line2: #333b4b; --track: #222938;
+    --t0: #5a82ee; --t0-bg: #1a2442; --t1: #d17634;
+    --good: #47cd89; --good-bg: #0b2e1e; --bad: #f97066; --bad-bg: #331615; --warn: #fdb022; --warn-bg: #2e2208;
+    --shadow: none; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.dlt { font-size: 11.5px; margin-left: 4px; }
+/* In tables and metric rows the difference goes on its own line under the value, so values stay aligned. */
+td .dlt, .kv .dlt { display: block; margin-left: 0; font-size: 11px; line-height: 1.15; }
+.kv { align-items: flex-start; }
+.verdict { font-family: var(--sans); font-size: 11.5px; white-space: normal; line-height: 1.3; }
+td.ci { white-space: normal; min-width: 104px; max-width: 132px; }
+.sum th, .sum td { padding: 7px 6px; }
+.star { color: var(--t1); }
+.tabs a.off { color: var(--faint); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--card) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1240px; margin: 0 auto; padding-inline: 20px; min-height: 56px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+.mark { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); display: grid; place-items: center; }
+.mark i { width: 8px; height: 8px; border-radius: 50%; background: var(--t0); display: block; }
+.tabs { display: flex; gap: 2px; align-self: stretch; }
+.tabs a { display: flex; align-items: center; padding-inline: 12px; color: var(--muted); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--t0); }
+.tabs a:hover { color: var(--ink); }
+.spacer { flex: 1; }
+.seg { display: inline-flex; padding: 2px; background: var(--track); border-radius: 8px; }
+.seg button { border: 0; background: transparent; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 20px 80px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note b { color: var(--warn); background: var(--warn-bg); border-radius: 999px; padding: 1px 8px; font-size: 11px; letter-spacing: .03em; text-transform: uppercase; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+
+/* Reports layout */
+.reports { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .reports { grid-template-columns: 1fr; } }
+.list { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); display: grid; gap: 0; overflow: hidden; }
+@media (max-width: 860px) { .list { position: static; } }
+.list-h { padding: 12px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.list-h h2 { margin: 0; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.list-h input { width: 100%; background: var(--sunk); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; }
+.runs { list-style: none; margin: 0; padding: 4px; display: grid; gap: 2px; max-height: 60vh; overflow: auto; }
+.run { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 9px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.run:hover { background: var(--sunk); }
+.run[aria-selected="true"] { background: var(--t0-bg); border-color: color-mix(in srgb, var(--t0) 35%, transparent); }
+.run input { margin: 0; accent-color: var(--t0); }
+.run .name { font-weight: 600; }
+.run .meta { grid-column: 2 / 4; color: var(--muted); font-size: 12px; }
+.run .pill { font-size: 12px; font-weight: 600; }
+.list-f { padding: 10px 14px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--line2); background: var(--card); border-radius: 8px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.list-f small { color: var(--muted); }
+.btn { white-space: nowrap; }
+.btn.small { padding: 3px 10px; font-size: 12px; }
+.spacer { flex: 1; }
+.two th, .two td { padding: 6px 8px; }
+.two .bar { min-width: 44px; }
+
+.detail { display: grid; gap: 16px; min-width: 0; }
+.head { padding: 16px 18px; display: grid; gap: 4px; }
+.head h1 { margin: 0; font-size: 20px; letter-spacing: -.02em; text-wrap: balance; }
+.head .sub { color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--track); border-radius: 6px; padding: 1px 7px; font-size: 12px; color: var(--ink2); }
+.sec { padding: 14px 18px 16px; display: grid; gap: 10px; align-content: start; }
+.sec h3 { margin: 0; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
+.sec h3 span { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); }
+th:first-child, td:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--sunk); }
+tr.on td { background: var(--t0-bg); }
+.suites { display: flex; gap: 6px; flex-wrap: wrap; }
+.suites button { border: 1px solid var(--line2); background: var(--card); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+.suites button[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; align-items: start; }
+.group { background: var(--sunk); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; }
+.group h4 { margin: 0 0 2px; font-size: 12px; color: var(--ink2); }
+.kv { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.kv span:first-child { color: var(--muted); }
+.arrow { color: var(--faint); font-size: 11px; margin-left: 3px; }
+.missing { font-size: 12.5px; color: var(--faint); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1080px) { .two { grid-template-columns: 1fr; } }
+.bar { position: relative; height: 6px; background: var(--track); border-radius: 3px; min-width: 56px; }
+.bar i { position: absolute; inset: 0 auto 0 0; background: var(--t0); border-radius: 3px; }
+.weak td:first-child, .weak .acc { color: var(--bad); font-weight: 600; }
+.over { color: var(--warn); font-weight: 600; }
+.dim { color: var(--faint); }
+.callout { background: var(--sunk); border: 1px dashed var(--line2); border-radius: 10px; padding: 12px 14px; color: var(--muted); font-size: 13px; }
+.callout code { font-family: var(--mono); color: var(--ink2); }
+.good { color: var(--good); } .bad { color: var(--bad); }
+.best { font-weight: 700; }
+.kinds { display: flex; gap: 8px; flex-wrap: wrap; }
+.kinds .chip b { font-weight: 600; }
+svg text { fill: var(--muted); font: 11px var(--sans); }
+.play { padding: 28px; display: grid; gap: 10px; }
+.play h2 { margin: 0; font-size: 18px; }
+.play p { margin: 0; color: var(--muted); max-width: 62ch; }
+.ghost { border: 1px dashed var(--line2); border-radius: 10px; height: 220px; display: grid; place-items: center; color: var(--faint); background: var(--sunk); }
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="logo"><span class="mark"><i></i></span>omj</div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="/" id="tab-play" data-i18n="tabPlay">Playground</a>
+    <a href="/reports" aria-current="page" data-i18n="tabReports">Reports</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="seg" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ko" aria-pressed="false">한국어</button>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <section class="reports">
+    <aside class="panel list" aria-label="Runs">
+      <div class="list-h">
+        <div style="display:flex;align-items:center;gap:8px"><h2 data-i18n="runs">Runs</h2><span class="spacer"></span>
+          <button class="btn small" id="reload" type="button" data-i18n="reload">Reload</button></div>
+        <input id="q" type="search" placeholder="Filter by model or suite" data-i18n-ph="filter" aria-label="Filter runs">
+      </div>
+      <ul class="runs" id="runs" role="listbox" aria-label="Benchmark runs"></ul>
+      <div class="list-f">
+        <button class="btn primary" id="cmp" type="button" disabled></button>
+        <small id="cmpHint" data-i18n="cmpHint">Tick two or more</small>
+      </div>
+    </aside>
+    <div class="detail" id="detail"></div>
+  </section>
+</div>
+
+<script>
+let RUNS = [], PLAYGROUND = true, BUNDLED = null;
+
+const I18N = {
+  en: { tabPlay: "Playground", tabReports: "Reports", runs: "Runs", filter: "Filter by model or suite", cmpHint: "Tick two or more", compare: n => `Compare selected (${n})`, summary: "Summary", suite: "Suite",
+    items: "N", acc: "Accuracy", ci: "95% CI", hard: "Hard", ece: "ECE", brier: "Brier", p50: "p50 ms", finished: "finished", duration: "duration",
+    metrics: "Metrics", byType: "By question type", byTag: "By tag", reliability: "Reliability", tag: "Tag", conf: "Confidence", gap: "Conf − acc",
+    weakNote: "red: 0.10+ below the suite accuracy · amber: overconfident", relNote: "bars: accuracy per confidence bin · line: perfect calibration",
+    noDetail: "This report was written before per-tag breakdowns and reliability bins were recorded. Rerun it to see them:",
+    notMeasured: "Not measured", cmpTitle: "Comparison", base: "base", metric: "Metric", cmpNote: "Differences are against the first run: green is better, red is worse. Bold is the best value.",
+    noCommon: "These runs share no suite.", groups: { Accuracy: "Accuracy", Calibration: "Calibration", Robustness: "Robustness", "Speed and cost": "Speed and cost" }, back: "Back to report", empty: "No benchmark reports yet. Run one, for example:", reload: "Reload", refLabel: "Reference", isRef: "This run is the reference", setRef: "Set as reference", clearRef: "Clear reference", noRef: "No reference run", vsRef: n => `vs ${n}`, deltaNote: n => `differences against \u2605 ${n}`, withinCi: "reference within the 95% CI", above: "above the reference", below: "below the reference", playOffTip: "No models are loaded on this reports-only server", playOff: "The playground needs models, so it is off on this reports-only server (started by omj bench --view). Start the full UI instead; it serves this Reports page too:" },
+  ko: { tabPlay: "플레이그라운드", tabReports: "리포트", runs: "실행 목록", filter: "모델 또는 스위트로 찾기", cmpHint: "2개 이상 선택", compare: n => `선택 비교 (${n})`, summary: "요약", suite: "스위트",
+    items: "N", acc: "정확도", ci: "95% 신뢰구간", hard: "어려운 문항", ece: "ECE", brier: "Brier", p50: "p50 ms", finished: "완료", duration: "소요",
+    metrics: "지표", byType: "문항 유형별", byTag: "태그별", reliability: "신뢰도", tag: "태그", conf: "확신도", gap: "확신도 − 정확도",
+    weakNote: "빨강: 스위트 정확도보다 0.10 이상 낮음 · 주황: 과신", relNote: "막대: 확신도 구간별 정확도 · 선: 완벽한 보정",
+    noDetail: "태그별 분해와 신뢰도 구간을 기록하기 전에 만든 보고서임. 다시 실행하면 볼 수 있음:",
+    notMeasured: "측정 안 됨", cmpTitle: "비교", base: "기준", metric: "지표", cmpNote: "차이는 첫 번째 실행 기준임. 초록은 좋아짐, 빨강은 나빠짐. 굵은 값이 가장 좋음.",
+    noCommon: "공통 스위트가 없음.", groups: { Accuracy: "정확도", Calibration: "보정", Robustness: "견고성", "Speed and cost": "속도·비용" }, back: "보고서로 돌아가기", empty: "아직 벤치마크 보고서가 없음. 예를 들어 다음처럼 실행함:", reload: "새로 고침", refLabel: "기준", isRef: "이 실행이 기준임", setRef: "기준으로 설정", clearRef: "기준 해제", noRef: "기준 실행 없음", vsRef: n => `${n} 대비`, deltaNote: n => `\u2605 ${n} 대비 차이`, withinCi: "기준이 95% 신뢰구간 안", above: "기준보다 높음", below: "기준보다 낮음", playOffTip: "이 리포트 전용 서버에는 모델이 로드되지 않음", playOff: "플레이그라운드는 모델을 로드해야 해서, omj bench --view로 띄운 이 리포트 전용 서버에서는 꺼져 있음. 대신 전체 UI를 실행하면 이 리포트 화면도 함께 제공됨:" },
+};
+const INFO = {
+  accuracy: ["accuracy", "up"], chance_corrected_accuracy: ["chance-corrected", "up"], hard_accuracy: ["hard items", "up"],
+  ece: ["ECE 15 bins", "down"], ece_jevbench: ["ECE 10 bins", "down"], brier: ["Brier", "down"], nll: ["NLL", "down"], coverage_at_risk: ["coverage @5% risk", "up"],
+  valid_vector_rate: ["valid vectors", "up"], order_shift_max: ["order shift max", "down"], ko_en_gap: ["KO-EN gap", "zero"], pair_agreement: ["KO-EN agreement", "up"],
+  latency_p50_ms: ["latency p50", "down"], latency_p95_ms: ["latency p95", "down"], cost_per_1k: ["cost / 1k", "down"],
+};
+const GROUPS = [["Accuracy", ["accuracy", "chance_corrected_accuracy", "hard_accuracy"]], ["Calibration", ["ece", "ece_jevbench", "brier", "nll", "coverage_at_risk"]],
+  ["Robustness", ["valid_vector_rate", "order_shift_max", "ko_en_gap", "pair_agreement"]], ["Speed and cost", ["latency_p50_ms", "latency_p95_ms", "cost_per_1k"]]];
+const ARROW = { up: "↑", down: "↓", zero: "→0" };
+const CMP_METRICS = ["accuracy", "hard_accuracy", "ece", "brier", "coverage_at_risk", "latency_p50_ms", "cost_per_1k"];
+
+let lang = "en", selected = null, suite = null, ticked = new Set(), showCompare = false;
+const T = k => I18N[lang][k] ?? I18N.en[k];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (k, v) => v == null ? "–" : k.startsWith("latency") ? v.toFixed(1) : k === "cost_per_1k" ? v.toFixed(4) : k === "valid_vector_rate" ? (v * 100).toFixed(1) + "%" : v.toFixed(3);
+const when = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(lang === "ko" ? "ko-KR" : "en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); };
+const dur = s => s == null ? "–" : `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, "0")}s`;
+// Reference run: every other run shows its difference from it. Default: the newest Jev (typesafe) run.
+let refChoice = null;
+try { refChoice = localStorage.getItem("omj-reports-ref"); } catch (e) {}
+// With no explicit choice, use the newest Jev run that shares a suite with the run being viewed.
+const refRun = (ctx) => {
+  if (refChoice === "__none__") return null;
+  const chosen = RUNS.find(r => r.id === refChoice);
+  if (chosen) return chosen;
+  const run = ctx || RUNS.find(r => r.id === selected);
+  if (!run) return null;
+  const jev = RUNS.filter(r => r.backend === "typesafe");
+  const local = jev.find(r => r.id !== run.id && Object.keys(r.suites).some(s => run.suites[s]));
+  if (local) return local;
+  if (run.backend === "typesafe") return null;
+  // No local Jev run: the Jev numbers saved with this run, else the values bundled with omj.
+  const own = run.reference || {};
+  const suites = {};
+  for (const s of Object.keys(run.suites)) {
+    if (own[s]) suites[s] = own[s].metrics;
+    else if (BUNDLED && BUNDLED.suites[s]) suites[s] = BUNDLED.suites[s];
+  }
+  if (!Object.keys(suites).length) return null;
+  const sources = new Set(Object.keys(suites).map(s => own[s] ? `${own[s].source} ${own[s].measured_at}` : `bundled ${BUNDLED.measured_at}`));
+  return { id: "__jev__", name: `Jev 1.13 (${[...sources].join(", ")})`, backend: "typesafe", suites, virtual: true, details: {} };
+};
+const setRef = id => { refChoice = id; try { localStorage.setItem("omj-reports-ref", id); } catch (e) {} };
+function delta(k, v, refV) {
+  if (v == null || refV == null) return "";
+  const d = v - refV, dir = INFO[k] ? INFO[k][1] : "up";
+  const txt = (d >= 0 ? "+" : "\u2212") + (k.startsWith("latency") ? Math.abs(d).toFixed(1) : Math.abs(d).toFixed(3));
+  const cls = Math.abs(d) < 5e-4 ? "dim" : ((dir === "up" ? d > 0 : d < 0) ? "good" : "bad");
+  return `<span class="dlt ${cls}">${txt}</span>`;
+}
+const headline = r => r.suites["jevbench-public"] ? ["jevbench", r.suites["jevbench-public"].accuracy] : [Object.keys(r.suites)[0], Object.values(r.suites)[0].accuracy];
+
+function renderList() {
+  const q = $("#q").value.trim().toLowerCase();
+  const rows = RUNS.filter(r => !q || (r.name + " " + r.model + " " + Object.keys(r.suites).join(" ")).toLowerCase().includes(q));
+  $("#runs").innerHTML = rows.map(r => {
+    const [s, a] = headline(r), ref = refRun();
+    const isRef = ref && r.id === ref.id;
+    const refSuite = s === "jevbench" ? "jevbench-public" : s;
+    const d = !isRef && ref && ref.suites[refSuite] ? delta("accuracy", a, ref.suites[refSuite].accuracy) : "";
+    const star = isRef ? `<span class="star" title="${esc(T("refLabel"))}">\u2605</span> ` : "";
+    return `<li class="run" role="option" aria-selected="${r.id === selected && !showCompare}" data-id="${r.id}">
+      <input type="checkbox" aria-label="Select ${esc(r.name)} for comparison" ${ticked.has(r.id) ? "checked" : ""}>
+      <span class="name">${star}${esc(r.name)}</span><span class="pill num">${a == null ? "–" : a.toFixed(3)}${d ? " " + d : ""}</span>
+      <span class="meta">${when(r.run_at)} · ${esc(r.backend)}${r.quant ? " · " + esc(r.quant) : ""}${r.adapter ? " · " + esc(r.adapter) : ""} · ${esc(s)}</span></li>`;
+  }).join("");
+  const n = ticked.size;
+  $("#cmp").textContent = T("compare")(n);
+  $("#cmp").disabled = n < 2;
+  $("#cmpHint").hidden = n >= 2;
+}
+
+function summaryTable(r) {
+  const ref = refRun(), isRef = ref && ref.id === r.id;
+  const rows = Object.entries(r.suites).map(([name, m]) => {
+    const ci = r.details[name]?.accuracy_ci95;
+    const rm = !isRef && ref ? ref.suites[name] : null;
+    const cell = k => `<td class="num">${k === "accuracy" ? "<b>" + fmt(k, m[k]) + "</b>" : fmt(k, m[k])}${rm ? delta(k, m[k], rm[k]) : ""}</td>`;
+    let verdict = "";
+    if (rm && rm.accuracy != null && m.accuracy != null) {
+      verdict = ci && rm.accuracy >= ci[0] && rm.accuracy <= ci[1] ? `<span class="dim">${T("withinCi")}</span>`
+        : `<span class="${m.accuracy > rm.accuracy ? "good" : "bad"}">${m.accuracy > rm.accuracy ? T("above") : T("below")}</span>`;
+    }
+    return `<tr class="clickable ${name === suite ? "on" : ""}" data-suite="${esc(name)}"><td>${esc(name)}</td><td class="num">${m.n}</td>
+      ${cell("accuracy")}<td class="num ci"><span class="dim">${ci ? ci[0].toFixed(3) + "–" + ci[1].toFixed(3) : "–"}</span>${verdict ? `<div class="verdict">${verdict}</div>` : ""}</td>
+      ${cell("hard_accuracy")}${cell("ece")}${cell("brier")}${cell("latency_p50_ms")}</tr>`;
+  }).join("");
+  const note = ref && !isRef ? ` <span>${T("deltaNote")(esc(ref.name))}</span>` : "";
+  return `<div class="panel sec"><h3>${T("summary")}${note}</h3><div class="scroll"><table class="sum">
+    <thead><tr><th>${T("suite")}</th><th>${T("items")}</th><th>${T("acc")} ↑</th><th>${T("ci")}</th><th>${T("hard")} ↑</th><th>${T("ece")} ↓</th><th>${T("brier")} ↓</th><th>${T("p50")} ↓</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div>`;
+}
+
+function metricGroups(m, rm) {
+  const groups = GROUPS.map(([title, keys]) => {
+    const rows = keys.filter(k => m[k] != null).map(k => `<div class="kv"><span>${INFO[k][0]}</span><span class="num">${fmt(k, m[k])}<span class="arrow">${ARROW[INFO[k][1]]}</span>${rm ? delta(k, m[k], rm[k]) : ""}</span></div>`);
+    return rows.length ? `<div class="group"><h4>${T("groups")[title]}</h4>${rows.join("")}</div>` : "";
+  }).join("");
+  const missing = Object.keys(INFO).filter(k => m[k] == null).map(k => INFO[k][0]);
+  return `${groups ? `<div class="groups">${groups}</div>` : ""}${missing.length ? `<div class="missing">${T("notMeasured")}: ${missing.join(", ")}</div>` : ""}`;
+}
+
+function reliabilitySvg(bins) {
+  const W = 320, H = 220, L = 34, B = 26, P = 10, w = W - L - P, h = H - B - P;
+  const x = v => L + v * w, y = v => P + (1 - v) * h;
+  const maxN = Math.max(...bins.map(b => b.n));
+  let g = "";
+  for (const t of [0, .25, .5, .75, 1]) g += `<line x1="${L}" x2="${W - P}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${t.toFixed(2)}</text>`;
+  for (const t of [0, .5, 1]) g += `<text x="${x(t)}" y="${H - 8}" text-anchor="middle">${t.toFixed(1)}</text>`;
+  const bars = bins.map(b => {
+    const bx = x(b.range[0]) + 1.5, bw = (b.range[1] - b.range[0]) * w - 3, op = .35 + .65 * b.n / maxN;
+    const over = b.mean_confidence - b.accuracy > .05;
+    return `<rect x="${bx}" y="${y(b.accuracy)}" width="${bw}" height="${y(0) - y(b.accuracy)}" rx="2" fill="${over ? "var(--t1)" : "var(--t0)"}" fill-opacity="${op.toFixed(2)}"><title>${b.range[0].toFixed(1)}–${b.range[1].toFixed(1)}: n=${b.n}, acc ${b.accuracy.toFixed(3)}, conf ${b.mean_confidence.toFixed(3)}</title></rect>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Reliability diagram">${g}${bars}
+    <line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--ink2)" stroke-dasharray="4 4" stroke-width="1.2"/></svg>`;
+}
+
+function refBar(r0) {
+  const ref = refRun();
+  if (ref && ref.id === r0.id) {
+    return `<span class="chip"><span class="star">\u2605</span> ${T("isRef")}</span><button class="btn small" type="button" id="unref">${T("clearRef")}</button>`;
+  }
+  const who = ref ? `<span>${T("refLabel")}: <span class="star">\u2605</span> ${esc(ref.name)}</span>` : `<span class="dim">${T("noRef")}</span>`;
+  if (r0.backend === "typesafe" && !ref) return `${who}<button class="btn small" type="button" id="setref">${T("setRef")}</button>`;
+  return `${who}<button class="btn small" type="button" id="setref">${T("setRef")}</button>`;
+}
+
+function renderDetail() {
+  const r = RUNS.find(x => x.id === selected);
+  if (!suite || !r.suites[suite]) suite = Object.keys(r.suites)[0];
+  const m = r.suites[suite], d = r.details[suite];
+  const kinds = d?.by_kind ? `<div class="sec"><h3>${T("byType")}</h3><div class="kinds">${Object.entries(d.by_kind).map(([k, s]) => `<span class="chip">${esc(k)} <b class="num">${s.accuracy.toFixed(3)}</b> <span class="dim">n=${s.n}</span></span>`).join("")}</div></div>` : "";
+  let tags = "", rel = "";
+  if (d?.by_tag) {
+    const rows = Object.entries(d.by_tag).map(([t, s]) => {
+      const gap = s.mean_confidence - s.accuracy, weak = s.accuracy < m.accuracy - .1;
+      return `<tr class="${weak ? "weak" : ""}"><td>${esc(t)}</td><td class="num">${s.n}</td><td class="num acc">${s.accuracy.toFixed(3)}</td>
+        <td><div class="bar"><i style="width:${(s.accuracy * 100).toFixed(1)}%"></i></div></td><td class="num">${s.mean_confidence.toFixed(3)}</td>
+        <td class="num ${gap > .05 ? "over" : "dim"}">${gap >= 0 ? "+" : ""}${gap.toFixed(3)}</td></tr>`;
+    }).join("");
+    tags = `<div class="panel sec"><h3>${T("byTag")} <span>${T("weakNote")}</span></h3><div class="scroll"><table>
+      <thead><tr><th>${T("tag")}</th><th>N</th><th>${T("acc")}</th><th></th><th>${T("conf")}</th><th>${T("gap")}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    rel = `<div class="panel sec"><h3>${T("reliability")} <span>${T("relNote")}</span></h3>${reliabilitySvg(d.reliability)}</div>`;
+  } else {
+    tags = `<div class="panel sec"><div class="callout">${T("noDetail")} <code>uv run omj bench --suite ${esc(suite)}</code></div></div>`;
+  }
+  const r0 = RUNS.find(x => x.id === selected);
+  $("#detail").innerHTML = `
+    <div class="panel head"><h1>${esc(r0.name)}</h1>
+      <div class="sub"><span>${esc(r0.model)}${r0.adapter && !r0.model.endsWith("+" + r0.adapter) ? " + " + esc(r0.adapter) : ""}</span><span class="chip">${esc(r0.backend)}</span>${r0.quant ? `<span class="chip">${esc(r0.quant)}</span>` : ""}<span class="chip">${esc(r0.route)}</span>
+      <span>${T("finished")} ${when(r0.run_at)}</span><span>${T("duration")} ${dur(r0.wall_seconds)}</span></div>
+      <div class="sub">${refBar(r0)}</div></div>
+    ${summaryTable(r0)}
+    <div class="panel sec"><h3>${T("metrics")} · ${esc(suite)}</h3>
+      <div class="suites">${Object.keys(r0.suites).map(s => `<button type="button" data-suite="${esc(s)}" aria-pressed="${s === suite}">${esc(s)}</button>`).join("")}</div>
+      ${metricGroups(m, refRun() && refRun().id !== r0.id ? refRun().suites[suite] : null)}${kinds ? kinds.replace('class="sec"', 'style="display:grid;gap:8px"') : ""}</div>
+    <div class="two">${tags}${rel}</div>`;
+}
+
+function renderCompare() {
+  const runs = RUNS.filter(r => ticked.has(r.id));
+  const common = Object.keys(runs[0].suites).filter(s => runs.every(r => r.suites[s]));
+  const head = `<div class="panel head"><h1>${T("cmpTitle")}</h1><div class="sub">${runs.map((r, i) => `<span class="chip">${i ? i : T("base")}</span><span>${esc(r.name)}</span>`).join("")}
+    <span class="spacer"></span><button class="btn" type="button" id="back">${T("back")}</button></div></div>`;
+  if (!common.length) { $("#detail").innerHTML = head + `<div class="panel sec"><div class="callout">${T("noCommon")}</div></div>`; return; }
+  const tables = common.map(s => {
+    const rows = CMP_METRICS.filter(k => runs.some(r => r.suites[s][k] != null)).map(k => {
+      const dir = INFO[k][1], vals = runs.map(r => r.suites[s][k]), present = vals.filter(v => v != null);
+      const best = present.length > 1 ? (dir === "up" ? Math.max(...present) : Math.min(...present)) : null;
+      const cells = vals.map((v, i) => {
+        if (v == null) return `<td class="num dim">n/a</td>`;
+        let delta = "";
+        if (i && vals[0] != null) {
+          const dv = v - vals[0], txt = (dv >= 0 ? "+" : "") + (k.startsWith("latency") ? dv.toFixed(1) : dv.toFixed(3));
+          const cls = Math.abs(dv) < 5e-4 ? "dim" : ((dir === "up" ? dv > 0 : dv < 0) ? "good" : "bad");
+          delta = ` <span class="${cls}">(${txt})</span>`;
+        }
+        return `<td class="num ${v === best ? "best" : ""}">${fmt(k, v)}${delta}</td>`;
+      }).join("");
+      return `<tr><td>${INFO[k][0]} <span class="arrow">${ARROW[dir]}</span></td>${cells}</tr>`;
+    }).join("");
+    return `<div class="panel sec"><h3>${esc(s)}</h3><div class="scroll"><table><thead><tr><th>${T("metric")}</th>${runs.map(r => `<th>${esc(r.name)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join("");
+  $("#detail").innerHTML = head + tables + `<p class="note">${T("cmpNote")}</p>`;
+}
+
+function render() {
+  document.querySelectorAll("[data-i18n]").forEach(el => { const v = T(el.dataset.i18n); if (typeof v === "string") el.textContent = v; });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = T(el.dataset.i18nPh));
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  document.documentElement.lang = lang;
+  const play = $("#tab-play");
+  play.classList.toggle("off", !PLAYGROUND);
+  play.title = PLAYGROUND ? "" : T("playOffTip");
+  renderList();
+  if (!RUNS.length) { $("#detail").innerHTML = `<div class="panel sec"><div class="callout">${T("empty")} <code>uv run omj bench --model Qwen/Qwen3.5-0.8B --suite omj-smoke --view</code></div></div>`; return; }
+  if (!RUNS.some(r => r.id === selected)) selected = RUNS[0].id;
+  showCompare && ticked.size >= 2 ? renderCompare() : renderDetail();
+}
+
+async function load() {
+  try {
+    const res = await fetch("/ui/api/reports");
+    const body = await res.json();
+    RUNS = body.runs || []; PLAYGROUND = body.playground !== false; BUNDLED = body.bundled_reference || null;
+  } catch (e) { RUNS = []; }
+  const wanted = new URLSearchParams(location.search).get("run");
+  if (wanted && RUNS.some(r => r.id === wanted)) selected = wanted;
+  render();
+}
+
+$("#runs").addEventListener("click", e => {
+  const li = e.target.closest(".run"); if (!li) return;
+  if (e.target.matches("input")) { e.target.checked ? ticked.add(li.dataset.id) : ticked.delete(li.dataset.id); if (ticked.size < 2) showCompare = false; }
+  else { selected = li.dataset.id; suite = null; showCompare = false; history.replaceState(null, "", `?run=${encodeURIComponent(selected)}`); }
+  render();
+});
+$("#detail").addEventListener("click", e => {
+  const s = e.target.closest("[data-suite]"); if (s) { suite = s.dataset.suite; render(); return; }
+  if (e.target.id === "back") { showCompare = false; render(); }
+  if (e.target.id === "setref") { setRef(selected); render(); }
+  if (e.target.id === "unref") { setRef("__none__"); render(); }
+});
+$("#cmp").addEventListener("click", () => { showCompare = true; render(); });
+$("#reload").addEventListener("click", load);
+$("#tab-play").addEventListener("click", e => {
+  if (PLAYGROUND) return;
+  e.preventDefault();
+  $("#detail").innerHTML = `<div class="panel sec"><h3>${T("tabPlay")}</h3><div class="callout">${T("playOff")}
+    <br><br><code>uv run omj ui</code><br><code>uv run omj ui --target Qwen/Qwen3.5-0.8B --target Qwen/Qwen3.5-2B</code></div>
+    <button class="btn" type="button" id="back">${T("back")}</button></div>`;
+});
+$("#q").addEventListener("input", renderList);
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => { lang = b.dataset.lang; try { localStorage.setItem("omj-ui-lang", lang); } catch (e) {} render(); }));
+try { lang = new URLSearchParams(location.search).get("lang") || localStorage.getItem("omj-ui-lang") || "en"; } catch (e) {}
+if (!I18N[lang]) lang = "en";
+load();
+</script>
+</body>
+</html>

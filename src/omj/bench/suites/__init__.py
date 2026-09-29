@@ -42,13 +42,25 @@ __all__ = [
 ]
 
 
+def is_suite_file(name: str) -> bool:
+    """True for `--suite my-test.jsonl`: a user's own suite in the bundled-suite format."""
+    return name.endswith(".jsonl")
+
+
+def suite_display_name(name: str) -> str:
+    """The name a suite is reported under: the file stem for a JSONL path, else the name itself."""
+    return Path(name).stem if is_suite_file(name) else name
+
+
 def load_suite(
     name: str,
     *,
     cache_dir: Path | str | None = None,
     downloader: Downloader | None = None,
 ) -> list[DecisionItem]:
-    """Load one benchmark suite by name, downloading external sets on first use."""
+    """Load one benchmark suite by name (or a JSONL file path), downloading external sets on first use."""
+    if is_suite_file(name):
+        return load_local(Path(name).expanduser(), suite_display_name(name))
     if name in LOCAL_SUITES:
         return load_local(local_suite_path(name), name)
     if name == JEVBENCH_SUITE:

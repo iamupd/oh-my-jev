@@ -41,12 +41,13 @@ from omj.gateway.assemble import assemble_answer, softmax
 from omj.gateway.schema import Question, answer_keys
 from omj.hw.detect import Probe, SystemProbe, detect
 from omj.hw.matrix import Overrides, Selection, select_backend
-from omj.models.download import Downloader, download_model, hf_snapshot_download
+from omj.models.download import Downloader, download_model, hf_snapshot_download, is_cached
+from omj.models.sizing import auto_quant
 
 DEFAULT_PORT = 8799
 JEV_KEY_ENV = "JEV_KEY"
 OPENROUTER_KEY_ENV = "OPENROUTER_KEY"
-_VALID_QUANTS = ("bf16", "4bit-prequant")
+_VALID_QUANTS = ("bf16", "nf4", "4bit-prequant")
 _VALID_PROVIDERS = ("typesafe", "openrouter")
 
 # Fixed smoke payloads (REQ-004): one state/instructions/criteria triple per
@@ -207,6 +208,11 @@ def run_init(
         )
     else:
         auto_local = None
+    if selection.backend == "semif" and opts.model is not None and opts.quant is None:
+        # A named model may not fit in bf16 on this GPU; pick 4-bit so nobody has to edit config.toml.
+        quant = auto_quant(selection.model, hw.vram_gb)
+        if quant != selection.quant:
+            selection = replace(selection, quant=quant, reason=f"{selection.reason or 'override'}; nf4 so it fits {hw.vram_gb} GB")
 
     emit(
         f"Detected hardware: device={hw.device} vram_gb={hw.vram_gb} "
@@ -227,14 +233,16 @@ def run_init(
         # corrupt the single-JSON-object stdout contract (REQ-007), so a
         # non-interactive run without --yes is treated as consent to
         # download rather than left to hang or fail unexpectedly.
-        if not opts.yes and not opts.json:
+        cached = is_cached(selection.model, selection.revision)
+        if not cached and not opts.yes and not opts.json:
             proceed = confirm(f"Download {selection.model}@{selection.revision or 'main'} now?")
             if not proceed:
                 raise OmjError(
                     ErrorCode.E_DOWNLOAD,
                     "download declined; rerun with --yes or pass --no-download",
                 )
-        emit(f"Downloading {selection.model}@{selection.revision or 'main'}...")
+        verb = "Using cached" if cached else "Downloading"
+        emit(f"{verb} {selection.model}@{selection.revision or 'main'}...")
         download_model(selection.model, selection.revision, downloader=downloader)
 
     if selection.backend == "typesafe" and opts.provider is None:
@@ -402,7 +410,7 @@ def register(app: typer.Typer) -> None:
     def init(
         backend: str = typer.Option(None, "--backend", help="Force a backend (mock, semif, kev, typesafe)."),
         model: str = typer.Option(None, "--model", help="Override the selected model id."),
-        quant: str = typer.Option(None, "--quant", help="Quantization: bf16 or 4bit-prequant."),
+        quant: str = typer.Option(None, "--quant", help="Quantization: bf16, nf4 (4-bit at load time) or 4bit-prequant. Default: bf16, or nf4 when --model would not fit."),
         api_key: str = typer.Option(
             None,
             "--api-key",

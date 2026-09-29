@@ -51,6 +51,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Example data
+
+- `examples/support-decisions.jsonl`: 40 synthetic support tickets written for oh-my-jev, CC0-1.0.
+
 ## Other files
 
 - `omj-smoke.jsonl`, `underdetermined.jsonl`, `massive-criteria.*.json`: original synthetic content, CC0-1.0.

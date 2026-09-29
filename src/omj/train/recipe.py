@@ -29,7 +29,7 @@ def _resolve_recipes_dir() -> Path:
 RECIPES_DIR = _resolve_recipes_dir()
 
 
-MixSourceName = Literal["massive", "massive-en", "banking77", "klue-ynat", "klue-nli", "nsmc", "openjev-business"]
+MixSourceName = Literal["massive", "massive-en", "banking77", "klue-ynat", "klue-nli", "nsmc", "openjev-business", "jsonl"]
 
 
 class MixSource(BaseModel):
@@ -38,8 +38,21 @@ class MixSource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: MixSourceName
-    train_n: int = Field(ge=1)
+    # Records to sample; for a jsonl source it may be left out to use every training record.
+    train_n: int | None = Field(default=None, ge=1)
     dev_n: int = Field(default=50, ge=0)
+    # jsonl only: your own decisions in the suite format (resolved against the recipe's folder).
+    path: str = ""
+
+    @model_validator(mode="after")
+    def _check_path(self) -> "MixSource":
+        if self.name == "jsonl" and not self.path:
+            raise ValueError("a jsonl source needs path = \"your-decisions.jsonl\"")
+        if self.name != "jsonl" and self.path:
+            raise ValueError(f"path only applies to name = \"jsonl\", not {self.name!r}")
+        if self.name != "jsonl" and self.train_n is None:
+            raise ValueError(f"{self.name}: train_n is required")
+        return self
 
 
 class DataSection(BaseModel):
@@ -62,9 +75,9 @@ class DataSection(BaseModel):
             raise ValueError("data.source = 'mix' needs at least one [[data.mix]] entry")
         if self.source == "massive" and self.mix:
             raise ValueError("[[data.mix]] entries need data.source = 'mix'")
-        names = [m.name for m in self.mix]
+        names = [(m.name, m.path) for m in self.mix]
         if len(names) != len(set(names)):
-            raise ValueError("each data.mix source may appear only once")
+            raise ValueError("each data.mix source (and each jsonl path) may appear only once")
         return self
 
 
@@ -137,6 +150,11 @@ def load_recipe(name_or_path: str | Path) -> Recipe:
         raise OmjError(ErrorCode.E_CONFIG, f"{target}: {exc}") from exc
     if "name" not in raw:
         raw["name"] = target.stem
+    # A jsonl path is relative to the recipe file when it exists there, else to the working directory.
+    for entry in (raw.get("data") or {}).get("mix") or []:
+        path = entry.get("path") if isinstance(entry, dict) else None
+        if path and not Path(path).expanduser().is_absolute() and (target.parent / path).is_file():
+            entry["path"] = str((target.parent / path).resolve())
     try:
         return Recipe.model_validate(raw)
     except ValidationError as exc:

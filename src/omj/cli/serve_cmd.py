@@ -69,7 +69,9 @@ def build_server_config(config: Config, overrides: ServeOverrides) -> Config:
         data["log"]["state"] = overrides.log_state
     if overrides.adapter:
         data["backend"]["adapter"] = overrides.adapter
-        note = follow_adapter_base(data["backend"], overrides.adapter)
+        from omj.models.sizing import configured_vram_gb
+
+        note = follow_adapter_base(data["backend"], overrides.adapter, configured_vram_gb(config))
         if note:
             print(note, file=sys.stderr)
 
@@ -149,7 +151,7 @@ def register(app: typer.Typer) -> None:
         adapter_value = _require_adapter_dir(adapter) if adapter is not None else None
 
         overrides = ServeOverrides(
-            backend=backend,
+            backend=backend if backend is not None or adapter_value is None else "semif",
             host=host,
             port=port,
             calibration=str(calibration) if calibration is not None else None,

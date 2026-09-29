@@ -1,0 +1,71 @@
+{
+ "name": "Jev 1.13",
+ "model": "jev-latest",
+ "measured_at": "2026-09-22",
+ "source": "bundled",
+ "note": "Measured by the oh-my-jev authors through TypeSafe's public API with omj bench on the bundled items. Not an official TypeSafe figure.",
+ "suites": {
+  "jevbench-public": {
+   "n": 231,
+   "accuracy": 0.8528138528138528,
+   "chance_corrected_accuracy": 0.7686868686868685,
+   "hard_accuracy": 0.7117117117117117,
+   "ece": 0.04038961038961072,
+   "ece_jevbench": 0.04290043290043246,
+   "brier": 0.18180173160173158,
+   "nll": 0.3176286951776175,
+   "coverage_at_risk": 0.8354978354978355,
+   "valid_vector_rate": 1.0,
+   "latency_p50_ms": 285.4476000647992,
+   "latency_p95_ms": 826.6014999826439
+  },
+  "omj-smoke": {
+   "n": 30,
+   "accuracy": 1.0,
+   "chance_corrected_accuracy": 1.0,
+   "ece": 0.007000000000000006,
+   "ece_jevbench": 0.007000000000000006,
+   "brier": 0.00035333333333333375,
+   "nll": 0.0070901446470969685,
+   "coverage_at_risk": 1.0,
+   "valid_vector_rate": 1.0,
+   "latency_p50_ms": 289.5629000267945,
+   "latency_p95_ms": 1087.424389977241
+  },
+  "underdetermined": {
+   "n": 20,
+   "valid_vector_rate": 1.0,
+   "overconfidence_rate": 0.45,
+   "mean_max_prob": 0.817,
+   "uniform_deviation": 0.5316666666666667,
+   "latency_p50_ms": 285.40529997553676,
+   "latency_p95_ms": 749.7309249301909
+  },
+  "massive-ko": {
+   "n": 600,
+   "accuracy": 0.8309608540925267,
+   "chance_corrected_accuracy": 0.8245938341558946,
+   "ece": 0.07622775800711813,
+   "ece_jevbench": 0.07145907473309698,
+   "brier": 0.25657224199288264,
+   "nll": 1.6594901188094466,
+   "coverage_at_risk": 0.6637010676156584,
+   "valid_vector_rate": 0.9366666666666666,
+   "latency_p50_ms": 243.9068999956362,
+   "latency_p95_ms": 708.5335900483186
+  },
+  "massive-en": {
+   "n": 600,
+   "accuracy": 0.8556701030927835,
+   "chance_corrected_accuracy": 0.8502739205065207,
+   "ece": 0.07455326460481154,
+   "ece_jevbench": 0.07455326460481182,
+   "brier": 0.22435120274914097,
+   "nll": 1.7603588793553422,
+   "coverage_at_risk": 0.7714776632302406,
+   "valid_vector_rate": 0.97,
+   "latency_p50_ms": 291.4376499829814,
+   "latency_p95_ms": 1192.389855056534
+  }
+ }
+}

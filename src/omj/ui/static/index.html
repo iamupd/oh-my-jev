@@ -45,6 +45,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .mark i { width: 8px; height: 8px; border-radius: 50%; background: var(--t0); display: block; }
 .logo small { font-weight: 450; color: var(--muted); font-size: 13px; }
 .spacer { flex: 1; }
+.tabs { display: flex; gap: 2px; align-self: stretch; }
+.tabs a { display: flex; align-items: center; padding: 0 12px; color: var(--muted); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--t0); }
+.tabs a:hover { color: var(--ink); }
 .lang { display: inline-flex; padding: 2px; background: var(--track); border-radius: 8px; }
 .lang button { border: 0; background: transparent; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; letter-spacing: .02em; }
 .lang button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
@@ -163,6 +167,10 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--f
 <body>
 <header class="top"><div class="top-in">
   <div class="logo"><span class="mark"><i></i></span>omj <small data-i18n="tagline"></small></div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="/" aria-current="page" data-i18n="tabPlay">Playground</a>
+    <a href="/reports" data-i18n="tabReports">Reports</a>
+  </nav>
   <div class="spacer"></div>
   <div class="lang" role="group" aria-label="Language">
     <button type="button" data-lang="en" aria-pressed="true">EN</button>
@@ -230,7 +238,7 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--f
 "use strict";
 const I18N = {
   en: {
-    tagline: "Decision Playground", title: "Test decision models side by side",
+    tagline: "Decision Playground", tabPlay: "Playground", tabReports: "Reports", title: "Test decision models side by side",
     lede: "Send one situation and a few typed questions to your models. Every answer comes back as calibrated probabilities, checked against your policy.",
     example: "Example", mode: "Mode", single: "Single", compare: "Compare", modelA: "Model A", modelB: "Model B", run: "Run",
     apinote: "One of the selected models calls an external API; running it uses your API quota.",
@@ -248,7 +256,7 @@ const I18N = {
     footer: "omj ui · local playground for System One decision models · not a production console"
   },
   ko: {
-    tagline: "결정 모델 플레이그라운드", title: "결정 모델을 나란히 시험함",
+    tagline: "결정 모델 플레이그라운드", tabPlay: "플레이그라운드", tabReports: "리포트", title: "결정 모델을 나란히 시험함",
     lede: "하나의 상황과 몇 개의 질문을 모델에 보내면, 모든 답이 보정된 확률로 돌아오고 정책으로 판정됨.",
     example: "예제", mode: "모드", single: "단일", compare: "비교", modelA: "모델 A", modelB: "모델 B", run: "실행",
     apinote: "선택한 모델 중 외부 API를 호출하는 모델이 있음. 실행하면 API 사용량이 발생함.",
@@ -411,7 +419,9 @@ function loadPreset(i) {
   }
   refreshStateKind(); renderQuestions(); resetOutput();
 }
-function targetLabel(x) { return x.name + " · " + x.model + (x.adapter ? " + " + x.adapter : "") + (x.remote_api ? "  (API)" : ""); }
+// The model id already ends with "+<adapter>" when semif loaded one; do not repeat it.
+function adapterSuffix(x, model) { return x.adapter && !String(model || "").endsWith("+" + x.adapter) ? " + " + x.adapter : ""; }
+function targetLabel(x) { return x.name + " · " + x.model + adapterSuffix(x, x.model) + (x.remote_api ? "  (API)" : ""); }
 function fillTargets() {
   for (const [id, pick] of [["target-a", 0], ["target-b", 1]]) {
     $(id).innerHTML = TARGETS.map((x, i) => `<option value="${i}">${esc(targetLabel(x))}</option>`).join("");
@@ -471,7 +481,7 @@ function renderResults(results, questions, policy) {
   $("results").innerHTML = `<div class="grid-res">${results.map((r, i) => {
     const color = colorOf(r.x);
     const head = `<div class="res-h"><div class="row1"><i class="dot" style="background:${color}"></i><span class="nm">${esc(r.x.name)}</span>${r.x.remote_api ? `<span class="tag api">${t("external")}</span>` : ""}${r.calibrated ? `<span class="tag">${t("calibrated")}</span>` : ""}</div>
-      <div class="meta"><span>${esc(r.model || r.x.model)}${r.x.adapter ? " + " + esc(r.x.adapter) : ""}</span><span>${r.server ? t("server") + " " + r.server.toFixed(0) + " ms · " : ""}${t("roundtrip")} ${r.rtt.toFixed(0)} ms</span></div></div>`;
+      <div class="meta"><span>${esc(r.model || r.x.model)}${esc(adapterSuffix(r.x, r.model || r.x.model))}</span><span>${r.server ? t("server") + " " + r.server.toFixed(0) + " ms · " : ""}${t("roundtrip")} ${r.rtt.toFixed(0)} ms</span></div></div>`;
     if (r.error) return `<div class="res">${head}<div class="err">${esc(r.error)}</div></div>`;
     const ev = LAST[i].policy;
     const verdict = ev ? `<div class="verdict ${ev.passed ? "ok" : "no"}"><div class="k">${t("verdict")}</div><div class="lab">${esc(verdictLabel(ev))}</div><ul class="rules">${ev.rules.map((x) =>

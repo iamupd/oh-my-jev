@@ -480,3 +480,45 @@ def test_run_init_cpu_with_only_an_openrouter_key_stores_that_key_variable(
     cfg = load_config(config_path())
     assert result.backend == "typesafe"
     assert (cfg.backend.provider, cfg.backend.api_key_env) == ("openrouter", "OPENROUTER_KEY")
+
+
+def test_run_init_reports_a_cached_model_instead_of_downloading(
+    monkeypatch: pytest.MonkeyPatch, omj_home: Path
+) -> None:
+    _clear_provider_keys(monkeypatch)
+    cached = omj_home / "models" / "Qwen__Qwen3.5-2B" / "15852e8c16360a2fea060d615a32b45270f8a8fc"
+    cached.mkdir(parents=True)
+    (cached / ".omj-complete").write_text("")
+    out = io.StringIO()
+
+    run_init(
+        InitOptions(yes=True),
+        probe=_SmallGpuProbe(),
+        downloader=_no_download,
+        backend_factory=_mock_factory,
+        out=out,
+        local_available=lambda: True,
+    )
+
+    assert "Using cached Qwen/Qwen3.5-2B@15852e8c" in out.getvalue()
+    assert "Downloading" not in out.getvalue()
+
+
+def test_run_init_picks_nf4_when_the_named_model_does_not_fit_in_bf16(
+    monkeypatch: pytest.MonkeyPatch, omj_home: Path
+) -> None:
+    _clear_provider_keys(monkeypatch)
+    run_init(
+        InitOptions(backend="semif", model="Qwen/Qwen3.5-4B", no_download=True, yes=True, json=True),
+        probe=_SmallGpuProbe(), backend_factory=_mock_factory, out=io.StringIO(), local_available=lambda: True,
+    )
+    assert load_config(config_path()).backend.quant == "nf4"
+
+
+def test_run_init_accepts_an_explicit_nf4(monkeypatch: pytest.MonkeyPatch, omj_home: Path) -> None:
+    _clear_provider_keys(monkeypatch)
+    run_init(
+        InitOptions(backend="semif", model="Qwen/Qwen3.5-2B", quant="nf4", no_download=True, yes=True, json=True),
+        probe=_SmallGpuProbe(), backend_factory=_mock_factory, out=io.StringIO(), local_available=lambda: True,
+    )
+    assert load_config(config_path()).backend.quant == "nf4"

@@ -40,13 +40,13 @@ def build_ui(
 ):
     """Resolve targets, load their backends, and return the UI app (injectable builder for tests)."""
     from omj.ui.app import create_ui_app
-    from omj.ui.targets import build_target_apps, default_targets, load_env_file, parse_target
+    from omj.ui.targets import build_target_apps, default_targets, load_env_file, parse_targets
 
     if env_file is not None:
         loaded = load_env_file(env_file)
         typer.echo(f"omj ui: loaded {len(loaded)} variable name(s) from {env_file}")  # names only, never values
     config = load_config()
-    specs = [parse_target(t) for t in targets] if targets else default_targets(config)
+    specs = parse_targets(targets) if targets else default_targets(config)
     return create_ui_app(build_target_apps(config, specs, builder=builder), access_code=access_code)
 
 
@@ -56,7 +56,8 @@ def register(app: typer.Typer) -> None:
         target: list[str] = typer.Option(
             [],
             "--target",
-            help="name=backend[:adapter], repeatable. e.g. --target mine=semif:C:/adapters/best --target jev=typesafe. "
+            help="A Hugging Face model id, backend[:adapter] or @config.toml, optionally prefixed with name=; repeatable. "
+            "e.g. --target Qwen/Qwen3.5-0.8B --target semif:C:/adapters/best --target jev=typesafe. "
             "Default: config.toml's backend, plus 'jev' when JEV_KEY is set.",
         ),
         host: str = typer.Option("127.0.0.1", "--host", help="Bind address. Non-loopback addresses need --allow-remote."),

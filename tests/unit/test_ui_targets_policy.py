@@ -184,3 +184,81 @@ def test_resolve_access_rules() -> None:
     generated = resolve_access("0.0.0.0", True, None)
     assert generated and len(generated) >= 24
     assert resolve_access("203.0.113.5", True, "given") == "given"
+
+
+def test_parse_target_at_profile_takes_backend_from_that_config(tmp_path: Path) -> None:
+    from omj.config import save_config
+
+    profile = tmp_path / "qwen-0.8b.toml"
+    cfg = Config()
+    cfg.backend.name, cfg.backend.model, cfg.backend.quant = "semif", "Qwen/Qwen3.5-0.8B", "bf16"
+    save_config(cfg, profile)
+
+    spec = parse_target(f"small=@{profile}")
+    assert (spec.name, spec.backend, spec.profile) == ("small", "semif", str(profile))
+
+    main = Config()
+    main.backend.name, main.backend.model = "semif", "Qwen/Qwen3.5-4B"
+    gateway_bearer = "-".join(["not", "a", "real", "bearer"])
+    main = main.model_copy(update={"serve": main.serve.model_copy(update={"api_key": gateway_bearer})})
+    derived = target_config(main, spec)
+    assert derived.backend.model == "Qwen/Qwen3.5-0.8B"
+    assert derived.serve.api_key == ""
+
+
+def test_parse_target_at_profile_must_exist(tmp_path: Path) -> None:
+    with pytest.raises(OmjError):
+        parse_target(f"x=@{tmp_path / 'missing.toml'}")
+
+
+def test_adapter_target_follows_the_adapter_base_model(tmp_path: Path) -> None:
+    import json
+
+    adapter = tmp_path / "best"
+    adapter.mkdir()
+    (adapter / "adapter_config.json").write_text(json.dumps({"base_model_name_or_path": "Qwen/Qwen3.5-4B"}), encoding="utf-8")
+    main = Config()
+    main.backend.name, main.backend.model, main.backend.revision = "semif", "Qwen/Qwen3.5-2B", "15852e8c"
+
+    derived = target_config(main, TargetSpec("tuned", "semif", str(adapter)))
+    assert (derived.backend.model, derived.backend.revision, derived.backend.adapter) == ("Qwen/Qwen3.5-4B", "", str(adapter))
+
+
+def test_parse_target_hf_id_runs_that_model_on_semif() -> None:
+    spec = parse_target("small=Qwen/Qwen3.5-0.8B")
+    assert (spec.backend, spec.model, spec.adapter) == ("semif", "Qwen/Qwen3.5-0.8B", "")
+
+    main = Config()
+    main.backend.name, main.backend.model, main.backend.adapter = "mock", "", ""
+    main.hardware.vram_gb = 8.0
+    derived = target_config(main, parse_target("big=Qwen/Qwen3.5-4B"))
+    assert (derived.backend.name, derived.backend.model, derived.backend.quant) == ("semif", "Qwen/Qwen3.5-4B", "nf4")
+
+
+def test_targets_without_a_name_get_one_from_what_they_run() -> None:
+    from omj.ui.targets import parse_targets
+
+    specs = parse_targets([
+        "Qwen/Qwen3.5-0.8B",
+        "Qwen/Qwen3.5-2B",
+        "semif",
+        "semif:/runs/adapters/example-intent-en/20260929T010203Z/best",
+        "mock",
+        "mock",
+    ])
+    assert [s.name for s in specs] == ["qwen3.5-0.8b", "qwen3.5-2b", "semif", "example-intent-en", "mock", "mock-2"]
+    assert specs[0].model == "Qwen/Qwen3.5-0.8B" and specs[3].backend == "semif"
+
+
+def test_explicit_names_still_work_and_must_be_unique() -> None:
+    from omj.ui.targets import parse_targets
+
+    assert [s.name for s in parse_targets(["small=Qwen/Qwen3.5-0.8B", "jev=typesafe"])] == ["small", "jev"]
+    with pytest.raises(OmjError):
+        parse_targets(["a=mock", "a=typesafe"])
+
+
+@pytest.mark.parametrize("bad", ["notabackend", "semif-typo:x", "a/b/c"])
+def test_unnamed_targets_must_be_a_model_backend_or_config(bad: str) -> None:
+    with pytest.raises(OmjError):
+        parse_target(bad)
