@@ -1,0 +1,46 @@
+{
+  "policy": {
+    "all": [
+      {"q": "category", "prob_of": "allowed", "gte": 0.8},
+      {"q": "pii", "noul_lte": 0.2}
+    ],
+    "pass_label": "publish",
+    "fail_label": "send to moderator"
+  },
+  "locales": {
+    "en": {
+      "title": "Marketplace listing check",
+      "description": "Screen a user-submitted listing before it goes live. Low confidence goes to a moderator.",
+      "labels": {"pass": "Publish", "fail": "Moderator queue"},
+      "state": {
+        "listing_title": "Vintage film camera, fully working",
+        "body": "Selling my 1978 rangefinder. Shutter and light meter tested last week, comes with the original leather case. Local pickup preferred, message me through the app for details.",
+        "category": "Electronics > Cameras",
+        "price": "USD 180"
+      },
+      "questions": {
+        "category": {"type": "choice", "instructions": "Which policy outcome fits this listing?",
+          "criteria": {"allowed": "Normal item, allowed as written", "prohibited": "Prohibited or regulated item", "misleading": "Misleading claims or wrong category", "spam": "Spam, duplicate or off-platform scheme"}},
+        "pii": {"type": "noul", "instructions": "Does the listing expose personal contact details such as a phone number, email or home address?"}
+      },
+      "act": {"pass": "Publish the listing now.", "fail": "Hold the listing and add it to the moderator queue with the scores."}
+    },
+    "ko": {
+      "title": "마켓 판매글 검수",
+      "description": "사용자가 올린 판매글을 게시 전에 검수함. 확신도가 낮으면 운영자에게 넘김.",
+      "labels": {"pass": "게시", "fail": "운영자 검토"},
+      "state": {
+        "제목": "빈티지 필름 카메라, 정상 작동",
+        "본문": "1978년식 레인지파인더 판매합니다. 지난주 셔터와 노출계 점검했고 정품 가죽 케이스 포함입니다. 직거래 선호하고 자세한 내용은 앱 채팅으로 주세요.",
+        "카테고리": "전자기기 > 카메라",
+        "가격": "20만 원"
+      },
+      "questions": {
+        "category": {"type": "choice", "instructions": "이 판매글에 맞는 정책 판정은?",
+          "criteria": {"allowed": "일반 물품, 그대로 게시 가능", "prohibited": "판매 금지 · 규제 물품", "misleading": "과장 · 허위 설명 또는 잘못된 카테고리", "spam": "스팸 · 중복 · 외부 거래 유도"}},
+        "pii": {"type": "noul", "instructions": "전화번호 · 이메일 · 집 주소 같은 개인 연락처가 노출되어 있는가?"}
+      },
+      "act": {"pass": "판매글을 바로 게시함.", "fail": "게시를 보류하고 점수와 함께 운영자 검토 대기열에 넣음."}
+    }
+  }
+}

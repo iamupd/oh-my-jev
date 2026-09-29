@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "oh-my-jev"
+version = "0.1.0"
+description = "Run open System One decision models behind a TypeSafe-Jev-compatible gateway."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.27",
+    "fastapi>=0.141",
+    "uvicorn>=0.53",
+    "pydantic>=2.13",
+    "httpx>=0.28",
+    "tomli-w>=1.2",
+    "huggingface-hub>=1.32",
+    "numpy>=2",
+    "rich>=13.8",
+]
+
+[project.optional-dependencies]
+semif = [
+    "torch==2.9.1",
+    "transformers>=5.17",
+    "accelerate>=1.15",
+    "peft>=0.21",
+    "pyarrow>=17",
+    "bitsandbytes>=0.45",
+]
+kev = []
+dev = ["pytest>=8", "typesafe-sdk>=0.7.1"]
+
+[project.scripts]
+omj = "omj.cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omj"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"suites" = "suites"
+"recipes" = "recipes"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not gpu and not live' -q"
+markers = [
+    "gpu: requires a CUDA GPU",
+    "live: requires live network access to an upstream service",
+    "slow: long-running test",
+]
+filterwarnings = [
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
+
+[tool.uv]
+default-groups = []
+
+# CUDA wheels for torch (the PyPI Windows wheel is CPU-only). Pinned to 2.9.1+cu128,
+# the newest build the flash-linear-attention / triton-windows stack is verified with.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }

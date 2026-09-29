@@ -1,0 +1,38 @@
+{
+  "policy": {
+    "all": [
+      {"q": "intent", "top_prob_gte": 0.8},
+      {"q": "needs_human", "noul_lte": 0.5}
+    ],
+    "pass_label": "auto-reply",
+    "fail_label": "route to agent"
+  },
+  "locales": {
+    "en": {
+      "title": "Support ticket routing",
+      "description": "Classify a card customer's message and decide whether an automated reply is safe.",
+      "labels": {"pass": "Auto-reply", "fail": "Route to agent"},
+      "state": "I paid abroad with my card and the exchange rate looks wrong. The same amount was also taken twice. Can you check?",
+      "questions": {
+        "intent": {"type": "choice", "instructions": "What is the customer's main intent?",
+          "criteria": {"exchange_rate": "Exchange rate or fee question", "double_charge": "The same transaction was charged twice", "lost_card": "Lost or stolen card", "close_account": "Close a card or account", "other": "None of the above"}},
+        "urgency": {"type": "score", "instructions": "How urgent is this ticket?", "criteria": ["Low", "Normal", "High"]},
+        "needs_human": {"type": "noul", "instructions": "Does this ticket require a human agent to check the account?"}
+      },
+      "act": {"pass": "Send the intent's reply template.", "fail": "Send to the agent queue with the scores attached."}
+    },
+    "ko": {
+      "title": "고객 문의 라우팅",
+      "description": "카드 고객 문의를 분류하고 자동 응답을 보내도 안전한지 판단함.",
+      "labels": {"pass": "자동 응답", "fail": "상담원 연결"},
+      "state": "해외에서 카드로 결제했는데 환율이 이상하게 적용된 것 같아요. 그리고 같은 금액이 두 번 빠져나갔습니다. 확인 부탁드려요.",
+      "questions": {
+        "intent": {"type": "choice", "instructions": "고객 문의의 주된 의도는?",
+          "criteria": {"exchange_rate": "결제 환율 · 수수료 문의", "double_charge": "같은 거래가 두 번 청구됨", "lost_card": "카드 분실 · 도난 신고", "close_account": "카드 · 계좌 해지 요청", "other": "위에 해당하지 않음"}},
+        "urgency": {"type": "score", "instructions": "처리 긴급도는?", "criteria": ["낮음", "보통", "높음"]},
+        "needs_human": {"type": "noul", "instructions": "상담원이 계정을 직접 확인해야 하는 문의인가?"}
+      },
+      "act": {"pass": "의도별 자동 응답 템플릿을 보냄.", "fail": "점수를 붙여 상담원 대기열로 보냄."}
+    }
+  }
+}

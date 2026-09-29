@@ -1,0 +1,46 @@
+# omj example recipe: example-intent-en
+# A small, untuned example that shows the recipe format and runs on an 8 GB GPU:
+# English intent decisions from two public datasets on Qwen3.5-0.8B with LoRA.
+# Swap in your own sources and questions; nothing here is tuned for any benchmark.
+#
+# Data (downloaded at run time, not redistributed):
+# - MASSIVE 1.1 en-US (Amazon, CC-BY-4.0)
+# - Banking77 (PolyAI, CC-BY-4.0)
+
+name = "example-intent-en"
+base_model = "Qwen/Qwen3.5-0.8B"
+revision = "2fc06364715b967f1860aea9cf38778875588b17"
+
+[data]
+source = "mix"
+locale = "en-US"
+questions = ["scenario", "intent"]
+shuffle_options = true
+surface_aug = 0.1
+
+[[data.mix]]
+name = "massive"
+train_n = 4000
+dev_n = 200
+
+[[data.mix]]
+name = "banking77"
+train_n = 2000
+dev_n = 100
+
+[lora]
+r = 8
+alpha = 16
+dropout = 0.05
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "in_proj_qkv", "out_proj"]
+
+[train]
+lr = 2e-4
+epochs = 1
+batch_size = 4
+grad_accum = 4
+max_seq_len = 1024
+label_smoothing = 0.05
+brier_weight = 0.5
+seed = 20260924
+eval_every_steps = 100
