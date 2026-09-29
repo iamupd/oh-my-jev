@@ -77,7 +77,7 @@ def resolve_named_model(backend: dict, model_id: str, vram_gb: float | None) -> 
     """The semif section for `--model org/name`, which may be a full model or a LoRA adapter repo.
 
     An adapter repo is downloaded (it is small) and loaded on the base model it names, so
-    `omj bench --model corners-ai/CoCo-Decision-4B-Ko` works like any other model id.
+    `omj bench --model your-org/your-lora-adapter` works like any other model id.
     """
     if not _is_adapter_repo(model_id):
         return named_model_backend(backend, model_id, vram_gb), None

@@ -17,7 +17,7 @@ from omj.models.sizing import auto_quant, is_hf_id, named_model_backend, param_b
         ("Qwen/Qwen3.5-0.8B", 0.8),
         ("meta-llama/Llama-3.2-3B-Instruct", 3.0),
         ("google/gemma-3-1b-it", 1.0),
-        ("corners-ai/CoCo-Decision-4B-Ko", 4.0),
+        ("example-org/Decision-4B-Adapter", 4.0),
         ("mistralai/Mixtral-8x7B-v0.1", None),
         ("org/no-size-tag", None),
     ],
@@ -59,7 +59,7 @@ def test_resolve_named_model_loads_an_adapter_repo_on_its_base(omj_home: Path) -
 
     from omj.models.sizing import resolve_named_model
 
-    repo = omj_home / "models" / "corners-ai__CoCo-Decision-4B-Ko" / "main"
+    repo = omj_home / "models" / "example-org__Decision-4B-Adapter" / "main"
     repo.mkdir(parents=True)
     (repo / ".omj-complete").write_text("")
     (repo / "adapter_config.json").write_text(
@@ -67,7 +67,7 @@ def test_resolve_named_model_loads_an_adapter_repo_on_its_base(omj_home: Path) -
     )
     base = {"name": "mock", "model": "", "revision": "", "quant": "bf16", "adapter": "", "calibration": ""}
 
-    out, note = resolve_named_model(base, "corners-ai/CoCo-Decision-4B-Ko", 8.0)
+    out, note = resolve_named_model(base, "example-org/Decision-4B-Adapter", 8.0)
 
     assert (out["name"], out["model"], out["revision"], out["quant"]) == ("semif", "Qwen/Qwen3.5-4B", "851bf6e8", "nf4")
     assert out["adapter"] == str(repo) and "LoRA adapter" in note

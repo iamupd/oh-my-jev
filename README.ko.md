@@ -142,7 +142,7 @@ uv run omj bench --suite jevbench-public --suite order        # omj init에서 �
 완료된 실행을 나란히 놓고 보고 싶다면:
 
 ```bash
-uv run omj compare jev/report.json coco-v13/report.json coco-v14/report.json --labels jev-1.13,coco-v13-nf4,coco-v14-nf4 --out runs/cmp
+uv run omj compare jev/report.json run-a/report.json run-b/report.json --labels jev-1.13,model-a,model-b --out runs/cmp
 ```
 
 <div align="center">
@@ -178,7 +178,7 @@ uv run omj compare runs/qwen-0.8b/report.json runs/qwen-2b/report.json --labels 
 
 - 토크나이저가 `" A"`, `" B"` …를 토큰 1개로 인코딩하는 `AutoModelForCausalLM` 체크포인트라면 됩니다. `trust_remote_code`가 필요한 모델은 로드하지 않습니다.
 - 기본은 bf16으로 로드하고, 모델 이름의 크기 표기(예: `4B`)로 보아 GPU에 들어가지 않으면 4-bit로 로드합니다.
-- LoRA adapter 저장소도 됩니다. `--model corners-ai/CoCo-Decision-4B-Ko`처럼 주면 adapter를 받아 학습에 쓰인 기반 모델 위에 올립니다. 로컬 adapter는 `--adapter <폴더>`로 같은 방식으로 쓰면 됩니다.
+- LoRA adapter 저장소도 됩니다. `--model your-org/your-lora-adapter`처럼 주면 adapter를 받아 학습에 쓰인 기반 모델 위에 올립니다. 로컬 adapter는 `--adapter <폴더>`로 같은 방식으로 쓰면 됩니다.
 - Llama, Gemma 같은 게이트 모델은 먼저 `hf auth login`과 라이선스 동의가 필요합니다.
 - 자체 프롬프트 형식으로 학습한 다른 프로젝트의 모델(Kev, Open-Jev 등)은 그 프로젝트의 서버로 측정하는 편이 정확합니다: `uv run omj bench --endpoint http://127.0.0.1:<포트>`
 
