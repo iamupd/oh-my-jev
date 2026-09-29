@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
 from omj.gateway.schema import SchemaError, parse_request
 from omj.ui.policy import PolicyError, validate_policy
@@ -90,6 +90,7 @@ def _reports_html() -> str:
 
 
 APP_ID = "omj-ui"
+UI_ASSETS = ("logo.png", "logo-dark.png", "favicon.png")
 
 
 def _target_info(spec: TargetSpec, app: FastAPI) -> dict[str, Any]:
@@ -143,6 +144,13 @@ def create_ui_app(
         if not targets:  # a reports-only server (omj bench --view) has no playground
             return RedirectResponse("/reports", status_code=307)
         return HTMLResponse(_index_html())
+
+    @root.get("/ui/{asset}", include_in_schema=False)
+    async def ui_asset(asset: str):
+        """The logo and favicon; only these files, nothing else from disk."""
+        if asset not in UI_ASSETS:
+            return JSONResponse({"error": {"type": "not_found", "message": asset}}, status_code=404)
+        return FileResponse(STATIC_DIR / asset, media_type="image/png", headers={"Cache-Control": "max-age=86400"})
 
     @root.get("/reports", response_class=HTMLResponse, include_in_schema=False)
     async def reports_page() -> HTMLResponse:
