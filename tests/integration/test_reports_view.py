@@ -100,3 +100,14 @@ def test_reports_api_carries_run_references_and_the_bundled_jev_values(omj_home:
 
     assert body["runs"][0]["reference"]["omj-smoke"]["metrics"]["accuracy"] == 1.0
     assert body["bundled_reference"]["name"] == "Jev 1.13" and "jevbench-public" in body["bundled_reference"]["suites"]
+
+
+def test_ui_serves_only_the_logo_and_favicon_files() -> None:
+    client = TestClient(create_ui_app([]))
+    for name in ("logo.png", "logo-dark.png", "favicon.png"):
+        response = client.get(f"/ui/{name}")
+        assert response.status_code == 200 and response.headers["content-type"] == "image/png"
+    assert client.get("/ui/index.html").status_code == 404
+    assert client.get("/ui/api/health").json()["app"] == "omj-ui"
+    page = client.get("/reports").text
+    assert 'href="/ui/favicon.png"' in page and 'src="/ui/logo.png"' in page
