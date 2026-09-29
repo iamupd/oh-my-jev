@@ -139,7 +139,7 @@ Every `omj bench` result ends with a **vs Jev** table (accuracy, ECE and Brier d
 To put finished runs side by side:
 
 ```bash
-uv run omj compare jev/report.json coco-v13/report.json coco-v14/report.json --labels jev-1.13,coco-v13-nf4,coco-v14-nf4 --out runs/cmp
+uv run omj compare jev/report.json run-a/report.json run-b/report.json --labels jev-1.13,model-a,model-b --out runs/cmp
 ```
 
 <div align="center">
@@ -174,7 +174,7 @@ uv run omj compare runs/qwen-0.8b/report.json runs/qwen-2b/report.json --labels 
 
 - Any `AutoModelForCausalLM` checkpoint whose tokenizer encodes `" A"`, `" B"`, ... as single tokens. Models that need `trust_remote_code` are not loaded.
 - The model is loaded in bf16, or in 4-bit when its size tag (for example `4B`) says it would not fit your GPU in bf16.
-- A LoRA adapter repo works too: `--model corners-ai/CoCo-Decision-4B-Ko` downloads the adapter and loads it on the base model it was trained on. `--adapter <dir>` does the same for a local adapter.
+- A LoRA adapter repo works too: `--model your-org/your-lora-adapter` downloads the adapter and loads it on the base model it was trained on. `--adapter <dir>` does the same for a local adapter.
 - Gated models (for example Llama or Gemma) need `hf auth login` and an accepted licence first.
 - Models trained by other projects with their own prompt format (Kev, Open-Jev and similar) are best measured through their own server: `uv run omj bench --endpoint http://127.0.0.1:<port>`.
 
