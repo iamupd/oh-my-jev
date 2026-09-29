@@ -44,3 +44,19 @@ def test_follow_adapter_base_leaves_matching_unknown_or_non_semif_sections_alone
     (tmp_path / "y").mkdir()
     mock = {"name": "mock", "model": ""}
     assert follow_adapter_base(mock, _adapter(tmp_path / "y", "Qwen/Qwen3.5-4B")) is None and mock["model"] == ""
+
+
+def test_adapter_paths_with_a_tilde_are_expanded(tmp_path: Path, monkeypatch) -> None:
+    from omj.ui.targets import parse_target
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    _adapter(tmp_path, "Qwen/Qwen3.5-4B")
+    assert adapter_base("~/best") == ("Qwen/Qwen3.5-4B", "")
+    assert parse_target("tuned=semif:~/best").adapter == str(tmp_path / "best")
+
+
+def test_follow_adapter_base_picks_nf4_when_the_base_does_not_fit(tmp_path: Path) -> None:
+    backend = {"name": "semif", "model": "Qwen/Qwen3.5-2B", "revision": "x", "quant": "bf16"}
+    note = follow_adapter_base(backend, _adapter(tmp_path, "Qwen/Qwen3.5-4B"), vram_gb=8.0)
+    assert backend["quant"] == "nf4" and "nf4" in note

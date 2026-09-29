@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
@@ -510,3 +511,52 @@ def test_bench_brief_prints_only_the_summary(tmp_path: Path) -> None:
     assert result.exit_code == 0, _combined_output(result)
     assert "Summary" in result.stdout and "omj-smoke" in result.stdout
     assert "Reliability" not in result.stdout and "By tag" not in result.stdout
+
+
+def test_bench_model_option_runs_a_named_model_on_semif(tmp_path: Path) -> None:
+    seen: list[BenchOptions] = []
+
+    def factory(opts: BenchOptions, config):
+        seen.append(opts)
+        return ResolvedTarget(target=_AuthFailingTarget(fail_on=10**6), backend_name="semif", model=opts.model or "", route="local")
+
+    report = run_bench(
+        BenchOptions(model="Qwen/Qwen3.5-0.8B", suites=["omj-smoke"], out=tmp_path / "run"),
+        target_factory=factory,
+        out=io.StringIO(),
+    )
+
+    assert seen[0].backend == "semif" and seen[0].model == "Qwen/Qwen3.5-0.8B"
+    assert report["run"]["command"].startswith("omj bench --model Qwen/Qwen3.5-0.8B")
+
+
+@pytest.mark.parametrize("extra", [["--endpoint", "http://127.0.0.1:8799"], ["--backend", "mock"]])
+def test_bench_model_option_rejects_endpoint_or_other_backend(tmp_path: Path, extra: list[str]) -> None:
+    result = _invoke(["--model", "Qwen/Qwen3.5-0.8B", *extra, "--out", str(tmp_path / "run")])
+    assert result.exit_code == 1 and "E_CONFIG" in _combined_output(result)
+
+
+def test_bench_adapter_without_backend_runs_on_semif(tmp_path: Path, omj_home: Path) -> None:
+    from omj.config import Config, save_config
+
+    cfg = Config()
+    cfg.backend.name = "mock"  # the configured backend must not swallow the adapter
+    save_config(cfg)
+    adapter = tmp_path / "best"
+    adapter.mkdir()
+    (adapter / "adapter_config.json").write_text("{}", encoding="utf-8")
+    seen: list[BenchOptions] = []
+
+    def factory(opts: BenchOptions, config):
+        seen.append(opts)
+        return ResolvedTarget(target=_AuthFailingTarget(fail_on=10**6), backend_name="semif", model="m", route="local")
+
+    import omj.cli.bench_cmd as bench_cmd
+
+    original = bench_cmd._require_adapter_dir
+    bench_cmd._require_adapter_dir = lambda path: str(path)  # no semif extra needed for this check
+    try:
+        run_bench(BenchOptions(adapter=str(adapter), suites=["omj-smoke"], out=tmp_path / "run"), target_factory=factory, out=io.StringIO())
+    finally:
+        bench_cmd._require_adapter_dir = original
+    assert seen[0].backend == "semif"

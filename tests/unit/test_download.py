@@ -247,3 +247,18 @@ class TestOfflineMode:
         )
 
         assert result == cached
+
+
+def test_download_model_explains_hf_hub_offline(tmp_path, monkeypatch) -> None:
+    import pytest
+
+    from omj.errors import ErrorCode, OmjError
+    from omj.models.download import download_model
+
+    monkeypatch.delenv("OMJ_NO_NETWORK", raising=False)
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    calls = []
+    with pytest.raises(OmjError) as err:
+        download_model("Qwen/Qwen3.5-0.8B", "", dest_root=tmp_path, downloader=lambda *a: calls.append(a))
+    assert err.value.code == ErrorCode.E_DOWNLOAD and calls == []
+    assert "HF_HUB_OFFLINE" in err.value.message and "Remove-Item Env:HF_HUB_OFFLINE" in err.value.hint

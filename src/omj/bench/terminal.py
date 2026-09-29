@@ -250,6 +250,56 @@ def _console(stream: TextIO) -> Console:
     return Console(file=stream, highlight=False, soft_wrap=False, width=width)
 
 
+def _source_line(reference: dict[str, Any]) -> str:
+    """Where each suite's Jev numbers come from, grouped: 'bundled Jev 1.13 (2026-09-22): a, b'."""
+    groups: dict[str, list[str]] = {}
+    for suite, info in reference.get("suites", {}).items():
+        if info["source"] == "bundled":
+            label = f"bundled Jev 1.13, measured {info['measured_at']}"
+        elif info["source"] == "measured now":
+            label = f"measured now ({info['run']})"
+        else:
+            label = f"{info['source']} {info['run']} ({info['measured_at']})"
+        groups.setdefault(label, []).append(suite)
+    return "; ".join(f"{label}: {', '.join(suites)}" for label, suites in groups.items())
+
+
+def _reference_table(data: dict[str, Any]) -> Table | None:
+    from omj.bench.reference import verdict
+
+    reference = data.get("reference")
+    if not reference or not reference.get("suites"):
+        return None
+    details = data.get("details") or {}
+    table = Table(box=box.SIMPLE_HEAD, show_edge=False, pad_edge=False, header_style="bold", padding=(0, 1))
+    table.add_column("vs Jev", no_wrap=True)
+    for title in ("Jev acc", "Acc Δ", "Jev ECE", "ECE Δ", "Brier Δ"):
+        table.add_column(title, justify="right", no_wrap=True)
+
+    def diff(key: str, direction: str, ci=None) -> Text:
+        value, ref = mine.get(key), jev.get(key)
+        if value is None or ref is None:
+            return Text("-", style="dim")
+        mark = verdict(value, ref, ci, direction)
+        style = {"▲": "green", "▼": "red"}.get(mark, "dim")
+        return Text(f"{value - ref:+.3f} {mark}".rstrip(), style=style)
+
+    for suite, info in reference["suites"].items():
+        mine, jev = data["suites"].get(suite, {}), info["metrics"]
+        ci = (details.get(suite) or {}).get("accuracy_ci95")
+        jev_acc = jev.get("accuracy")
+        jev_ece = jev.get("ece")
+        table.add_row(
+            Text(suite, style="bold"),
+            "-" if jev_acc is None else f"{jev_acc:.3f}",
+            diff("accuracy", "up", ci),
+            "-" if jev_ece is None else f"{jev_ece:.3f}",
+            diff("ece", "down"),
+            diff("brier", "down"),
+        )
+    return table
+
+
 def print_results(stream: TextIO, data: dict[str, Any], out_dir: Path, *, brief: bool = False) -> None:
     console = _console(stream)
     if not brief:
@@ -259,8 +309,13 @@ def print_results(stream: TextIO, data: dict[str, Any], out_dir: Path, *, brief:
         for name, metrics in data["suites"].items():
             console.print(_suite(name, metrics, details.get(name) or {}))
             console.print()
+    parts: list[RenderableType] = [_summary(data)]
+    ref_table = _reference_table(data)
+    if ref_table is not None:
+        parts += [Text(), ref_table, Text("≈ Jev inside this run's 95% CI · ▲ better · ▼ worse", style="dim"),
+                  Text("Jev: " + _source_line(data["reference"]), style="dim")]
     report = Group(
-        _summary(data),
+        *parts,
         Text(),
         Text.assemble(("Report  ", "bold"), str(out_dir)),
         Text("        report.md · report.json · reliability.svg", style="dim"),

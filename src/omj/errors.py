@@ -18,7 +18,7 @@ class ErrorCode(str, Enum):
 HINTS: dict[ErrorCode, str] = {
     ErrorCode.E_NO_GPU: "Run with --backend mock or --backend kev, or use a machine with a supported GPU.",
     ErrorCode.E_SCHEMA: "Fix the request payload so it matches the SystemOne request schema.",
-    ErrorCode.E_DOWNLOAD: "Check your network connection and retry, or pass --no-download to skip fetching model files.",
+    ErrorCode.E_DOWNLOAD: "Check your network connection and retry. 'omj init' also accepts --no-download to skip fetching model files.",
     ErrorCode.E_CONFIG: "Fix the reported field in config.toml, or delete it to regenerate defaults with 'omj init'.",
     ErrorCode.E_BACKEND: "Install the required extra (e.g. 'uv sync --extra semif') or choose a different --backend.",
     ErrorCode.E_AUTH: "Set a valid API key via --api-key or the configured environment variable.",

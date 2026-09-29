@@ -20,6 +20,23 @@ def hf_snapshot_download(repo_id: str, revision: str, local_dir: str) -> str:
     return snapshot_download(repo_id=repo_id, revision=revision, local_dir=local_dir)
 
 
+def is_cached(model_id: str, revision: str, dest_root: Path | None = None) -> bool:
+    """True when `download_model` would return the cached copy without any download."""
+    root = dest_root if dest_root is not None else omj_home() / "models"
+    return (root / model_id.replace("/", "__") / (revision or "main") / ".omj-complete").exists()
+
+
+def cached_revision(model_id: str, dest_root: Path | None = None) -> str | None:
+    """A revision of `model_id` already complete in the omj model cache ("main" first), else None."""
+    root = (dest_root if dest_root is not None else omj_home() / "models") / model_id.replace("/", "__")
+    if not root.is_dir():
+        return None
+    done = sorted(d.name for d in root.iterdir() if (d / ".omj-complete").exists())
+    if not done:
+        return None
+    return "main" if "main" in done else done[0]
+
+
 def download_model(
     model_id: str,
     revision: str,
@@ -70,6 +87,14 @@ def download_model(
         raise OmjError(
             ErrorCode.E_DOWNLOAD,
             "network disabled (OMJ_NO_NETWORK=1)",
+        )
+    if os.environ.get("HF_HUB_OFFLINE", "").strip().lower() in ("1", "true", "yes", "on"):
+        # Fail with the real cause instead of three retries and a Hugging Face stack message.
+        raise OmjError(
+            ErrorCode.E_DOWNLOAD,
+            f"{model_id}@{revision_ref} is not in the omj cache and HF_HUB_OFFLINE is set in this shell",
+            hint="Unset it to allow the download: 'Remove-Item Env:HF_HUB_OFFLINE' (PowerShell) or "
+            "'unset HF_HUB_OFFLINE' (bash), then run the command again.",
         )
 
     last_error: Exception | None = None

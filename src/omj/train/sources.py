@@ -233,9 +233,36 @@ def massive_records(locale: str, split: Split, questions: list[str], *, cache_di
     return out
 
 
+JSONL_DEV_PER_MILLE = 100  # 10% of a user's items (by id) are held out as dev
+
+
+def jsonl_records(path: str | Path, split: Split) -> list[DecisionRecord]:
+    """Your own decisions in the bundled-suite format, one record per labelled question.
+
+    Rows are validated exactly like a bench suite. The train/dev split is by item id, so all
+    questions of one item land on the same side; questions without an expected answer are skipped.
+    """
+    from omj.bench.suites.local import load_local
+
+    source = f"jsonl:{Path(path).stem}"
+    out = []
+    for item in load_local(Path(path).expanduser(), Path(path).stem):
+        group = _group(f"{source}:{item.id}")
+        if ((group % 1000) < JSONL_DEV_PER_MILLE) != (split == "dev"):
+            continue
+        for qid, question in item.questions.items():
+            label = (item.expected or {}).get(qid)
+            if label is not None:
+                out.append(DecisionRecord(f"{source}:{item.id}:{qid}", source, item.state, question, str(label),
+                                          _group(f"{source}:{item.id}:{qid}")))
+    return out
+
+
 def load_source(name: str, split: Split, *, locale: str = "ko-KR", questions: list[str] | None = None,
-                cache_dir=None, fetch: Fetch | None = None) -> list[DecisionRecord]:
+                cache_dir=None, fetch: Fetch | None = None, path: str = "") -> list[DecisionRecord]:
     """All records of one source and split (downloads once)."""
+    if name == "jsonl":
+        return jsonl_records(path, split)
     if name == "massive":
         return massive_records(locale, split, questions or ["scenario", "intent"], downloader=fetch)
     if name == "massive-en":

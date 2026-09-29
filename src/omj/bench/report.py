@@ -103,6 +103,7 @@ def write_report(
     calibration: dict[str, Any] | None = None,
     run: dict[str, Any] | None = None,
     details: dict[str, dict[str, Any]] | None = None,
+    reference: dict[str, Any] | None = None,
 ) -> tuple[Path, Path]:
     """Write report.json and report.md into `out_dir`, returning both paths (REQ-040).
 
@@ -121,6 +122,8 @@ def write_report(
         report_data["run"] = run
     if details is not None:
         report_data["details"] = details
+    if reference is not None:
+        report_data["reference"] = reference
 
     json_path = out_dir / "report.json"
     json_path.write_text(

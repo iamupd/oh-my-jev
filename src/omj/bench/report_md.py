@@ -168,6 +168,38 @@ def _summary_section(data: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _reference_section(data: dict[str, Any]) -> list[str]:
+    from omj.bench.reference import verdict
+
+    reference = data.get("reference")
+    if not reference or not reference.get("suites"):
+        return []
+    details = data.get("details") or {}
+    rows = []
+    for suite, info in reference["suites"].items():
+        mine, jev = data["suites"].get(suite, {}), info["metrics"]
+        ci = (details.get(suite) or {}).get("accuracy_ci95")
+
+        def diff(key: str, direction: str, use_ci: bool = False) -> str:
+            value, ref = mine.get(key), jev.get(key)
+            if value is None or ref is None:
+                return "-"
+            return f"{value - ref:+.3f} {verdict(value, ref, ci if use_ci else None, direction)}".rstrip()
+
+        if info["source"] == "bundled":
+            source = f"bundled Jev 1.13, {info['measured_at']}"
+        else:
+            source = f"{info['source']} `{info['run']}`, {info['measured_at']}"
+        rows.append([suite, _num(jev.get("accuracy"), 3), diff("accuracy", "up", True), _num(jev.get("ece"), 3),
+                     diff("ece", "down"), diff("brier", "down"), diff("hard_accuracy", "up"), source])
+    lines = ["### Compared with Jev", ""]
+    lines += _table(["Suite", "Jev accuracy", "Accuracy Δ", "Jev ECE", "ECE Δ", "Brier Δ", "Hard Δ", "Jev numbers from"], rows, "lrrrrrrl")
+    lines += ["", "≈ Jev lies inside this run's 95% interval (not a significant difference) · ▲ better · ▼ worse."]
+    if reference.get("note"):
+        lines += ["", f"Bundled values: {reference['note']}"]
+    return lines + [""]
+
+
 def _suite_section(index: int, name: str, metrics: dict[str, Any], details: dict[str, Any]) -> list[str]:
     lines = [f"### 4.{index} {name}", ""]
     facts = [
@@ -249,6 +281,7 @@ def render_markdown(data: dict[str, Any]) -> str:
     lines += _run_section(data)
     lines += _model_section(data)
     lines += _summary_section(data)
+    lines += _reference_section(data)
     lines += ["## 4. Suites", ""]
     details = data.get("details") or {}
     for index, (name, metrics) in enumerate(data["suites"].items(), 1):

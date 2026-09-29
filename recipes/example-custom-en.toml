@@ -1,0 +1,42 @@
+# omj example recipe: example-custom-en
+# Train on your own decisions: examples/support-decisions.jsonl (40 synthetic support tickets, CC0,
+# three questions each) mixed with Banking77 so the adapter does not overfit a handful of items.
+# Replace the jsonl path with your file; it uses the same format as the bench suites.
+#
+# Data: examples/support-decisions.jsonl (synthetic, CC0-1.0); Banking77 (PolyAI, CC-BY-4.0, downloaded at run time)
+
+name = "example-custom-en"
+base_model = "Qwen/Qwen3.5-0.8B"
+revision = "2fc06364715b967f1860aea9cf38778875588b17"
+
+[data]
+source = "mix"
+locale = "en-US"
+shuffle_options = true
+
+[[data.mix]]
+name = "jsonl"
+path = "../examples/support-decisions.jsonl"   # relative to this recipe file; train_n left out = every record
+dev_n = 20
+
+[[data.mix]]
+name = "banking77"
+train_n = 1000
+dev_n = 50
+
+[lora]
+r = 8
+alpha = 16
+dropout = 0.05
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "in_proj_qkv", "out_proj"]
+
+[train]
+lr = 2e-4
+epochs = 2
+batch_size = 4
+grad_accum = 4
+max_seq_len = 1024
+label_smoothing = 0.05
+brier_weight = 0.5
+seed = 20260929
+eval_every_steps = 50

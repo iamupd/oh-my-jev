@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import re
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,7 +41,7 @@ MIN_SINGLE_TOKEN_LABELS = 2
 
 def validate_adapter_dir(path: str | Path) -> Path:
     """The one adapter-directory check shared by `omj serve`, `omj bench` and load (REQ-012)."""
-    adapter_dir = Path(path)
+    adapter_dir = Path(path).expanduser()
     if not adapter_dir.is_dir():
         raise OmjError(ErrorCode.E_BACKEND, f"adapter directory does not exist: {adapter_dir}")
     if not (adapter_dir / ADAPTER_CONFIG_FILE).is_file():
@@ -327,7 +328,11 @@ class SemifBackend:
                 ErrorCode.E_BACKEND, f"could not apply adapter {adapter_dir}: {exc}"
             ) from exc
 
-        self.model_id = f"{self.model_id}+{adapter_dir.name}"
+        # An adapter from the omj model cache sits in <org>__<name>/<revision>: show the repo name.
+        label = adapter_dir.name
+        if (label == "main" or re.fullmatch(r"[0-9a-f]{40}", label)) and "__" in adapter_dir.parent.name:
+            label = adapter_dir.parent.name.split("__", 1)[1]
+        self.model_id = f"{self.model_id}+{label}"
         logger.info("semif merged adapter %s into %s", adapter_dir, self.model_id)
 
     def _load_from_hub(self, cfg: BackendSection) -> None:

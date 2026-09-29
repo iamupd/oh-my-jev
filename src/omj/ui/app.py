@@ -1,7 +1,10 @@
 """Root FastAPI app for `omj ui` (REQ-U01, U02, U04, U06, U09, U11, U12).
 
 Layout:
-  GET  /                      single-page UI (no external assets)
+  GET  /                      single-page UI (no external assets); redirects to /reports without targets
+  GET  /reports               finished bench runs: summary, breakdowns, reliability, comparison
+  GET  /ui/api/reports        the runs behind /reports (report.json summaries, read-only)
+  GET  /ui/api/health         identifies an omj ui server (used by `omj bench --view`)
   GET  /ui/api/targets        target list (name, backend, model; never keys)
   GET  /ui/api/presets        bundled example presets, one entry per preset with all locales
   POST /t/<name>/v1/systemone each target's own, unchanged gateway app
@@ -81,6 +84,14 @@ def _index_html() -> str:
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
+@lru_cache(maxsize=1)
+def _reports_html() -> str:
+    return (STATIC_DIR / "reports.html").read_text(encoding="utf-8")
+
+
+APP_ID = "omj-ui"
+
+
 def _target_info(spec: TargetSpec, app: FastAPI) -> dict[str, Any]:
     backend = app.state.backend
     calibrated = app.state.calibration is not None or bool(backend.capabilities.calibrated)
@@ -128,8 +139,27 @@ def create_ui_app(
             )
 
     @root.get("/", response_class=HTMLResponse, include_in_schema=False)
-    async def index() -> HTMLResponse:
+    async def index():
+        if not targets:  # a reports-only server (omj bench --view) has no playground
+            return RedirectResponse("/reports", status_code=307)
         return HTMLResponse(_index_html())
+
+    @root.get("/reports", response_class=HTMLResponse, include_in_schema=False)
+    async def reports_page() -> HTMLResponse:
+        return HTMLResponse(_reports_html())
+
+    @root.get("/ui/api/reports")
+    async def list_reports() -> JSONResponse:
+        from omj.bench.reference import bundled
+        from omj.bench.report_index import load_runs
+
+        ref = bundled()
+        return JSONResponse({"runs": load_runs(), "playground": bool(targets),
+                             "bundled_reference": {"name": ref["name"], "measured_at": ref["measured_at"], "suites": ref["suites"]}})
+
+    @root.get("/ui/api/health")
+    async def health() -> JSONResponse:
+        return JSONResponse({"app": APP_ID, "playground": bool(targets)})
 
     @root.get("/ui/api/targets")
     async def list_targets() -> JSONResponse:
