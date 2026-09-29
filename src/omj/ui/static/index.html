@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omj Playground</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%23101828%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.2%22 fill=%22%232c5be0%22/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --sunk: #f9fafb;
+  --ink: #101828; --ink2: #344054; --muted: #667085; --faint: #98a2b3;
+  --line: #e4e7ec; --line2: #d0d5dd; --track: #eef1f5;
+  --t0: #2c5be0; --t1: #e2762c; --t2: #667085;
+  --good: #067647; --good-bg: #ecfdf3; --good-line: #abefc6;
+  --bad: #b42318; --bad-bg: #fef3f2; --bad-line: #fecdca;
+  --warn: #93370d; --warn-bg: #fffaeb; --warn-line: #fedf89;
+  --shadow: 0 1px 2px rgba(16,24,40,.05);
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c111d; --card: #161b26; --sunk: #121722;
+    --ink: #f5f5f6; --ink2: #cecfd2; --muted: #94969c; --faint: #6c737f;
+    --line: #262d3b; --line2: #333b4b; --track: #222938;
+    --t0: #5a82ee; --t1: #d17634; --t2: #94969c;
+    --good: #47cd89; --good-bg: #0b2e1e; --good-line: #16603f;
+    --bad: #f97066; --bad-bg: #331615; --bad-line: #7a271a;
+    --warn: #fdb022; --warn-bg: #2e2208; --warn-line: #6b4a0c;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+
+.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: saturate(160%) blur(8px); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 14px; }
+.logo { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
+.mark { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); display: grid; place-items: center; }
+.mark i { width: 8px; height: 8px; border-radius: 50%; background: var(--t0); display: block; }
+.logo small { font-weight: 450; color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+.lang { display: inline-flex; padding: 2px; background: var(--track); border-radius: 8px; }
+.lang button { border: 0; background: transparent; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; letter-spacing: .02em; }
+.lang button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 96px; display: grid; gap: 16px; }
+.hero h1 { margin: 4px 0 4px; font-family: var(--display); font-size: 26px; font-weight: 650; letter-spacing: -.02em; }
+.hero p { margin: 0; color: var(--muted); max-width: 70ch; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 12px; font-weight: 550; color: var(--muted); }
+select, input[type=text], textarea { background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 7px 10px; box-shadow: var(--shadow); }
+select { padding-right: 28px; min-width: 180px; }
+.seg { display: inline-flex; padding: 2px; background: var(--track); border-radius: 8px; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 550; }
+.seg button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+.run { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: var(--card); border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 600; cursor: pointer; }
+.run kbd { font: 11px var(--mono); opacity: .6; }
+.run:disabled { opacity: .5; cursor: progress; }
+.apinote { flex-basis: 100%; font-size: 12px; color: var(--warn); display: none; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.card-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.stepn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line2); display: grid; place-items: center; font: 600 11px var(--mono); color: var(--muted); flex: none; }
+.card-h h2 { margin: 0; font-family: var(--display); font-size: 15px; font-weight: 620; letter-spacing: -.005em; }
+.card-h .sub { color: var(--muted); font-size: 12.5px; }
+.card-h .right { margin-left: auto; }
+.card-b { padding: 16px 18px; }
+.tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; background: var(--track); color: var(--ink2); letter-spacing: .01em; white-space: nowrap; }
+.tag.api { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-line); }
+.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+textarea { width: 100%; resize: vertical; line-height: 1.55; }
+#state { min-height: 160px; font: 12.5px/1.6 var(--mono); background: var(--sunk); }
+
+.qs { display: grid; gap: 8px; }
+details.q { border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+details.q > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; gap: 10px; align-items: center; }
+details.q > summary::-webkit-details-marker { display: none; }
+details.q > summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint); transform: rotate(-45deg); transition: transform .15s; flex: none; }
+details.q[open] > summary::before { transform: rotate(45deg); }
+.sid { font: 600 12.5px var(--mono); }
+.sins { color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.scnt { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.qbody { display: grid; gap: 8px; padding: 0 14px 14px; }
+.qhead { display: flex; gap: 8px; align-items: center; }
+.qhead input.qid { width: 170px; font: 12.5px var(--mono); }
+.ghost { border: 1px solid var(--line2); background: var(--card); border-radius: 7px; padding: 4px 10px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.ghost:hover { color: var(--ink); }
+.ghost.danger:hover { color: var(--bad); border-color: var(--bad-line); }
+.qhead .ghost { margin-left: auto; }
+.opts { display: grid; gap: 6px; }
+.opt { display: grid; grid-template-columns: 170px 1fr auto; gap: 6px; }
+.opt.lvl { grid-template-columns: 34px 1fr auto; }
+.opt .n { align-self: center; text-align: center; font: 12px var(--mono); color: var(--faint); }
+.opt input { width: 100%; }
+.adds { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.add { justify-self: start; border: 1px dashed var(--line2); background: transparent; border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--ink2); font-size: 12.5px; }
+.add:hover { border-style: solid; }
+details.pol { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.pol > summary { cursor: pointer; font-size: 13px; color: var(--ink2); font-weight: 550; }
+#policy { min-height: 130px; font: 12px/1.6 var(--mono); margin-top: 8px; background: var(--sunk); }
+
+.empty { color: var(--muted); font-size: 13px; padding: 18px; text-align: center; border: 1px dashed var(--line2); border-radius: 10px; }
+.grid-res { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.res { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.res-h { padding: 12px 16px; display: grid; gap: 2px; border-bottom: 1px solid var(--line); background: var(--sunk); }
+.res-h .row1 { display: flex; align-items: center; gap: 8px; }
+.res-h .nm { font-weight: 650; font-family: var(--display); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
+.res-h .meta { font: 11.5px var(--mono); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.verdict { margin: 14px 16px 4px; border-radius: 10px; padding: 12px 14px; border: 1px solid; }
+.verdict.ok { background: var(--good-bg); border-color: var(--good-line); }
+.verdict.no { background: var(--bad-bg); border-color: var(--bad-line); }
+.verdict .k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.verdict .lab { font-family: var(--display); font-weight: 680; font-size: 22px; letter-spacing: -.015em; line-height: 1.25; }
+.verdict.ok .lab { color: var(--good); } .verdict.no .lab { color: var(--bad); }
+.rules { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12px; display: grid; gap: 3px; }
+.rules li { display: flex; gap: 8px; color: var(--ink2); align-items: baseline; }
+.mk { font: 700 10.5px var(--mono); padding: 0 5px; border-radius: 4px; flex: none; }
+.mk.y { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
+.mk.n { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.rules code { font: 11.5px var(--mono); color: var(--muted); }
+.res-b { padding: 4px 16px 12px; }
+.ans { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ans:last-child { border-bottom: 0; }
+.ans-h { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.ans-h .qn { font: 600 12px var(--mono); color: var(--muted); }
+.ans-h .top { font-weight: 650; font-family: var(--display); }
+.ans .ins { font-size: 12.5px; color: var(--ink2); margin: 2px 0 8px; }
+.pb { display: grid; grid-template-columns: minmax(90px, 38%) 1fr 48px; gap: 10px; align-items: center; font-size: 12.5px; margin: 4px 0; }
+.pb .k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.pb.win .k { color: var(--ink); font-weight: 600; }
+.tr { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.fl { height: 100%; border-radius: 3px; opacity: .35; }
+.pb.win .fl { opacity: 1; }
+.pb .v { text-align: right; font: 12px var(--mono); color: var(--ink2); }
+.conf { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+.err { margin: 14px 16px; padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn); font-size: 12.5px; }
+.acts { display: grid; gap: 8px; }
+.act { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.act .who { font-weight: 650; display: inline-flex; gap: 8px; align-items: center; min-width: 110px; }
+.act .txt { flex: 1; color: var(--ink2); min-width: 200px; }
+.pill { font-size: 11.5px; font-weight: 650; padding: 2px 10px; border-radius: 999px; white-space: nowrap; border: 1px solid; }
+.pill.ok { background: var(--good-bg); color: var(--good); border-color: var(--good-line); }
+.pill.no { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-line); }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--faint); font-size: 12px; }
+@media (max-width: 700px) {
+  .opt { grid-template-columns: 1fr; }
+  .run { margin-left: 0; width: 100%; justify-content: center; }
+  select { min-width: 0; width: 100%; } .field { flex: 1 1 100%; }
+  .logo small { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .fl { transition: width .4s cubic-bezier(.2,.7,.2,1); } }
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="logo"><span class="mark"><i></i></span>omj <small data-i18n="tagline"></small></div>
+  <div class="spacer"></div>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ko" aria-pressed="false">한국어</button>
+  </div>
+</div></header>
+
+<main>
+  <section class="hero">
+    <h1 data-i18n="title"></h1>
+    <p data-i18n="lede"></p>
+  </section>
+
+  <section class="toolbar" aria-label="Controls">
+    <label class="field"><span data-i18n="example"></span><select id="preset"></select></label>
+    <div class="field"><span data-i18n="mode"></span>
+      <div class="seg" role="group">
+        <button type="button" id="mode-single" aria-pressed="true" data-i18n="single"></button>
+        <button type="button" id="mode-compare" aria-pressed="false" data-i18n="compare"></button>
+      </div></div>
+    <label class="field"><span data-i18n="modelA"></span><select id="target-a"></select></label>
+    <label class="field" id="target-b-wrap" hidden><span data-i18n="modelB"></span><select id="target-b"></select></label>
+    <button type="button" class="run" id="run"><span data-i18n="run"></span><kbd>Ctrl ↵</kbd></button>
+    <div class="apinote" id="apinote" data-i18n="apinote"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="stepn">1</span><h2 data-i18n="observe"></h2><span class="sub" id="preset-desc"></span><span class="right tag" id="state-kind"></span></div>
+    <div class="card-b">
+      <textarea id="state" spellcheck="false" aria-label="State"></textarea>
+      <div class="hint" data-i18n="stateHint"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="stepn">2</span><h2 data-i18n="ask"></h2><span class="sub" data-i18n="askSub"></span></div>
+    <div class="card-b">
+      <div class="qs" id="questions"></div>
+      <div class="adds">
+        <button type="button" class="add" data-add="choice">+ choice</button>
+        <button type="button" class="add" data-add="noul">+ yes / no</button>
+        <button type="button" class="add" data-add="score">+ score</button>
+      </div>
+      <details class="pol">
+        <summary data-i18n="policy"></summary>
+        <textarea id="policy" spellcheck="false" aria-label="Policy"></textarea>
+        <div class="hint" data-i18n="policyHint"></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="stepn">3</span><h2 data-i18n="judge"></h2><span class="sub" data-i18n="judgeSub"></span></div>
+    <div class="card-b" id="results"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><span class="stepn">4</span><h2 data-i18n="act"></h2><span class="sub" data-i18n="actSub"></span></div>
+    <div class="card-b"><div class="acts" id="acts"></div></div>
+  </section>
+</main>
+<footer data-i18n="footer"></footer>
+
+<script>
+"use strict";
+const I18N = {
+  en: {
+    tagline: "Decision Playground", title: "Test decision models side by side",
+    lede: "Send one situation and a few typed questions to your models. Every answer comes back as calibrated probabilities, checked against your policy.",
+    example: "Example", mode: "Mode", single: "Single", compare: "Compare", modelA: "Model A", modelB: "Model B", run: "Run",
+    apinote: "One of the selected models calls an external API; running it uses your API quota.",
+    observe: "Observe", ask: "Ask", askSub: "Typed questions: choice, yes / no, score", judge: "Judge", judgeSub: "Probabilities, confidence, latency and policy verdict",
+    act: "Act", actSub: "What happens once the policy is applied",
+    stateText: "Text", stateJson: "JSON", stateHint: "Valid JSON (object or array) is sent as structured state; anything else is sent as text.",
+    policy: "Policy rules (JSON)", policyHint: "Rules: choice · prob_of + gte · top_prob_gte · score_gte · score_lte · noul_gte · noul_lte. All rules must hold.",
+    emptyRun: "Run to see each model's probabilities, confidence, latency and policy verdict.", emptyAct: "Shown after a run.",
+    blank: "Blank question", deleteQ: "Remove", del: "Delete", option: "+ option", level: "+ level", options: "options", levels: "levels", yesno: "yes / no",
+    yesnoHint: "Yes / no question: returns P(yes).", keyPh: "key", descPh: "description", insPh: "Question",
+    verdict: "Policy verdict", confidence: "confidence", expected: "expected score", server: "server", roundtrip: "round trip", calibrated: "calibrated",
+    external: "external API", noAnswer: "No answer", error: "Could not judge because of an error", noPolicy: "No policy rules",
+    copy: "Copy JSON", copied: "Copied", running: "Running",
+    needQ: "Add at least one question.", badPolicy: "Could not parse the policy JSON: ", initFail: "Failed to load: ",
+    footer: "omj ui · local playground for System One decision models · not a production console"
+  },
+  ko: {
+    tagline: "결정 모델 플레이그라운드", title: "결정 모델을 나란히 시험함",
+    lede: "하나의 상황과 몇 개의 질문을 모델에 보내면, 모든 답이 보정된 확률로 돌아오고 정책으로 판정됨.",
+    example: "예제", mode: "모드", single: "단일", compare: "비교", modelA: "모델 A", modelB: "모델 B", run: "실행",
+    apinote: "선택한 모델 중 외부 API를 호출하는 모델이 있음. 실행하면 API 사용량이 발생함.",
+    observe: "상황", ask: "질문", askSub: "선택형 · 예/아니오 · 점수형", judge: "판정", judgeSub: "확률 · 확신도 · 지연 · 정책 판정",
+    act: "후속 행동", actSub: "정책 적용 결과",
+    stateText: "텍스트", stateJson: "JSON", stateHint: "JSON 객체 · 배열로 읽히면 구조화된 상황으로, 아니면 텍스트로 보냄.",
+    policy: "정책 규칙 (JSON)", policyHint: "규칙: choice · prob_of + gte · top_prob_gte · score_gte · score_lte · noul_gte · noul_lte. 모든 규칙을 만족해야 통과.",
+    emptyRun: "실행하면 모델별 확률 · 확신도 · 지연과 정책 판정이 표시됨.", emptyAct: "실행 뒤 표시됨.",
+    blank: "빈 질문", deleteQ: "질문 삭제", del: "삭제", option: "+ 선택지", level: "+ 단계", options: "개 선택지", levels: "단계", yesno: "예/아니오",
+    yesnoHint: "예/아니오 질문: P(yes)를 반환함.", keyPh: "키", descPh: "설명", insPh: "질문 문장",
+    verdict: "정책 판정", confidence: "확신도", expected: "기대 점수", server: "서버", roundtrip: "왕복", calibrated: "보정",
+    external: "외부 API", noAnswer: "응답 없음", error: "오류로 판정하지 못함", noPolicy: "정책 규칙 없음",
+    copy: "JSON 복사", copied: "복사됨", running: "실행 중",
+    needQ: "질문을 하나 이상 추가하여야 함.", badPolicy: "정책 JSON을 읽지 못함: ", initFail: "불러오기 실패: ",
+    footer: "omj ui · System One 결정 모델용 로컬 플레이그라운드 · 운영 콘솔 아님"
+  }
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const COLORS = ["var(--t0)", "var(--t1)", "var(--t2)"];
+let TARGETS = [], PRESETS = [], QUESTIONS = [], CURRENT = null, LAST = [];
+let mode = "single", lang = "en", presetIndex = 0;
+const t = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+
+/* ---------- policy: mirrors omj/ui/policy.py ---------- */
+function checkRule(rule, a) {
+  if (!a) return [false, "no answer"];
+  const probs = a.probabilities || {};
+  if ("choice" in rule) return [a.choice === rule.choice, "choice=" + a.choice];
+  if ("prob_of" in rule) { const p = Number(probs[rule.prob_of] || 0); return [p >= rule.gte, "P(" + rule.prob_of + ")=" + p.toFixed(3)]; }
+  if ("top_prob_gte" in rule) { const p = Math.max(0, ...Object.values(probs).map(Number)); return [p >= rule.top_prob_gte, "top P=" + p.toFixed(3)]; }
+  if ("score_gte" in rule || "score_lte" in rule) {
+    if (a.score === undefined || a.score === null) return [false, "not a score answer"];
+    return ["score_gte" in rule ? a.score >= rule.score_gte : a.score <= rule.score_lte, "score=" + Number(a.score).toFixed(2)];
+  }
+  if ("noul_gte" in rule || "noul_lte" in rule) {
+    if (a.noul === undefined || a.noul === null) return [false, "not a noul answer"];
+    return ["noul_gte" in rule ? a.noul >= rule.noul_gte : a.noul <= rule.noul_lte, "P(yes)=" + Number(a.noul).toFixed(3)];
+  }
+  return [false, "unknown rule"];
+}
+function evaluatePolicy(policy, answers) {
+  const rules = (policy && policy.all) || [];
+  const res = rules.map((r) => { const [ok, detail] = checkRule(r, answers[r.q]); return { rule: r, ok, detail }; });
+  const passed = res.length > 0 && res.every((r) => r.ok);
+  return { passed, label: passed ? (policy.pass_label || "pass") : (policy.fail_label || "fail"), rules: res };
+}
+function ruleText(r) {
+  const k = Object.keys(r).filter((x) => x !== "q");
+  return r.q + " · " + k.map((x) => x + " " + r[x]).join(", ");
+}
+
+/* ---------- i18n ---------- */
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+}
+function setLang(next) {
+  lang = I18N[next] ? next : "en";
+  try { localStorage.setItem("omj-ui-lang", lang); } catch (e) { /* storage may be blocked */ }
+  applyI18n(); fillPresets();
+  if (presetIndex >= 0 && PRESETS[presetIndex]) loadPreset(presetIndex); else { renderQuestions(); refreshStateKind(); resetOutput(); }
+  updateApiNote();
+}
+function initialLang() {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (q && I18N[q]) return q;
+  try { const s = localStorage.getItem("omj-ui-lang"); if (s && I18N[s]) return s; } catch (e) { /* ignore */ }
+  return "en";
+}
+
+/* ---------- questions ---------- */
+function blankQuestion(type) {
+  const id = "q" + (QUESTIONS.length + 1);
+  if (type === "choice") return { id, type, instructions: "", criteria: [["option_a", ""], ["option_b", ""]], open: true };
+  if (type === "score") return { id, type, instructions: "", criteria: ["Low", "Medium", "High"], open: true };
+  return { id, type: "noul", instructions: "", criteria: null, open: true };
+}
+function fromWire(id, q) {
+  if (q.type === "choice") return { id, type: "choice", instructions: q.instructions, criteria: Object.entries(q.criteria || {}) };
+  if (q.type === "score") return { id, type: "score", instructions: q.instructions, criteria: [...(q.criteria || [])] };
+  return { id, type: "noul", instructions: q.instructions, criteria: q.criteria || null };
+}
+function toWire() {
+  const out = {};
+  for (const q of QUESTIONS) {
+    const w = { type: q.type, instructions: q.instructions };
+    if (q.type === "choice") w.criteria = Object.fromEntries(q.criteria.filter(([k]) => k.trim()).map(([k, v]) => [k.trim(), v]));
+    else if (q.type === "score") w.criteria = q.criteria.filter((v) => v.trim());
+    else if (q.criteria) w.criteria = q.criteria;
+    out[q.id.trim()] = w;
+  }
+  return out;
+}
+function renderQuestions() {
+  const box = $("questions");
+  box.innerHTML = "";
+  QUESTIONS.forEach((q, qi) => {
+    const el = document.createElement("details");
+    el.className = "q";
+    if (q.open) el.open = true;
+    el.addEventListener("toggle", () => { q.open = el.open; });
+    const sep = lang === "ko" ? "" : " ";
+    const count = q.type === "choice" ? q.criteria.length + sep + t("options") : q.type === "score" ? q.criteria.length + sep + t("levels") : t("yesno");
+    let opts = "";
+    if (q.type === "choice") opts = q.criteria.map(([k, v], i) =>
+      `<div class="opt"><input type="text" id="q${qi}-k${i}" value="${esc(k)}" placeholder="${t("keyPh")}" aria-label="${t("keyPh")}"><input type="text" id="q${qi}-v${i}" value="${esc(v)}" placeholder="${t("descPh")}" aria-label="${t("descPh")}"><button type="button" class="ghost danger" data-del="${i}">${t("del")}</button></div>`).join("");
+    if (q.type === "score") opts = q.criteria.map((v, i) =>
+      `<div class="opt lvl"><span class="n">${i}</span><input type="text" id="q${qi}-l${i}" value="${esc(v)}" aria-label="${i}"><button type="button" class="ghost danger" data-del="${i}">${t("del")}</button></div>`).join("");
+    el.innerHTML = `<summary><span class="tag">${q.type === "noul" ? "yes/no" : q.type}</span><span class="sid">${esc(q.id)}</span><span class="sins">${esc(q.instructions)}</span><span class="scnt">${esc(count)}</span></summary>
+      <div class="qbody">
+        <div class="qhead"><input class="qid" type="text" id="q${qi}-id" value="${esc(q.id)}" aria-label="id"><button type="button" class="ghost danger" data-rmq>${t("deleteQ")}</button></div>
+        <input type="text" id="q${qi}-ins" value="${esc(q.instructions)}" placeholder="${t("insPh")}" aria-label="${t("insPh")}">
+        ${q.type === "noul" ? `<div class="hint">${t("yesnoHint")}</div>` : `<div class="opts">${opts}</div><button type="button" class="add" data-addopt>${q.type === "choice" ? t("option") : t("level")}</button>`}
+      </div>`;
+    el.querySelector(`#q${qi}-id`).addEventListener("input", (e) => { q.id = e.target.value; });
+    el.querySelector(`#q${qi}-ins`).addEventListener("input", (e) => { q.instructions = e.target.value; });
+    el.querySelector("[data-rmq]").addEventListener("click", () => { QUESTIONS.splice(qi, 1); renderQuestions(); });
+    if (q.type === "choice") q.criteria.forEach((pair, i) => {
+      el.querySelector(`#q${qi}-k${i}`).addEventListener("input", (e) => { pair[0] = e.target.value; });
+      el.querySelector(`#q${qi}-v${i}`).addEventListener("input", (e) => { pair[1] = e.target.value; });
+    });
+    if (q.type === "score") q.criteria.forEach((_, i) => el.querySelector(`#q${qi}-l${i}`).addEventListener("input", (e) => { q.criteria[i] = e.target.value; }));
+    el.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { q.criteria.splice(Number(b.dataset.del), 1); renderQuestions(); }));
+    const addopt = el.querySelector("[data-addopt]");
+    if (addopt) addopt.addEventListener("click", () => { q.type === "choice" ? q.criteria.push(["option_" + (q.criteria.length + 1), ""]) : q.criteria.push(""); renderQuestions(); });
+    box.appendChild(el);
+  });
+}
+
+/* ---------- state / presets / targets ---------- */
+function parseState() {
+  const raw = $("state").value;
+  try { const v = JSON.parse(raw); if (v && typeof v === "object") return v; } catch (e) { /* plain text */ }
+  return raw;
+}
+function refreshStateKind() { $("state-kind").textContent = typeof parseState() === "string" ? t("stateText") : t("stateJson"); }
+function localeOf(p) { return p.locales[lang] || p.locales.en; }
+function fillPresets() {
+  $("preset").innerHTML = PRESETS.map((p, i) => `<option value="${i}">${esc(localeOf(p).title)}</option>`).join("") + `<option value="-1">${esc(t("blank"))}</option>`;
+  $("preset").value = String(presetIndex);
+}
+function resetOutput() {
+  $("results").innerHTML = `<div class="empty">${esc(t("emptyRun"))}</div>`;
+  $("acts").innerHTML = `<div class="empty">${esc(t("emptyAct"))}</div>`;
+}
+function loadPreset(i) {
+  presetIndex = i;
+  if (i < 0) {
+    CURRENT = null; $("preset-desc").textContent = ""; $("state").value = "";
+    QUESTIONS = [blankQuestion("noul")]; $("policy").value = "";
+  } else {
+    const p = PRESETS[i], loc = localeOf(p);
+    CURRENT = { policy: p.policy, labels: loc.labels, act: loc.act };
+    $("preset-desc").textContent = loc.description || "";
+    $("state").value = typeof loc.state === "string" ? loc.state : JSON.stringify(loc.state, null, 2);
+    QUESTIONS = Object.entries(loc.questions).map(([id, q]) => fromWire(id, q));
+    $("policy").value = JSON.stringify(p.policy, null, 2);
+  }
+  refreshStateKind(); renderQuestions(); resetOutput();
+}
+function targetLabel(x) { return x.name + " · " + x.model + (x.adapter ? " + " + x.adapter : "") + (x.remote_api ? "  (API)" : ""); }
+function fillTargets() {
+  for (const [id, pick] of [["target-a", 0], ["target-b", 1]]) {
+    $(id).innerHTML = TARGETS.map((x, i) => `<option value="${i}">${esc(targetLabel(x))}</option>`).join("");
+    $(id).value = String(Math.min(pick, TARGETS.length - 1));
+  }
+  $("mode-compare").disabled = TARGETS.length < 2;
+}
+function picked() {
+  const out = [Number($("target-a").value)];
+  if (mode === "compare") { const b = Number($("target-b").value); if (b !== out[0]) out.push(b); }
+  return out.map((i) => TARGETS[i]).filter(Boolean);
+}
+function updateApiNote() { $("apinote").style.display = picked().some((x) => x.remote_api) ? "block" : "none"; }
+function setMode(m) {
+  mode = m;
+  $("mode-single").setAttribute("aria-pressed", String(m === "single"));
+  $("mode-compare").setAttribute("aria-pressed", String(m === "compare"));
+  $("target-b-wrap").hidden = m !== "compare";
+  updateApiNote();
+}
+
+/* ---------- run ---------- */
+async function callTarget(x, body) {
+  const t0 = performance.now();
+  try {
+    const r = await fetch(x.endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const rtt = performance.now() - t0;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return { x, error: (data.error && (data.error.type + ": " + data.error.message)) || ("HTTP " + r.status), rtt };
+    return { x, data, rtt, server: Number(r.headers.get("x-omj-latency-ms")) || null, model: r.headers.get("x-omj-model") || x.model, calibrated: r.headers.get("x-omj-calibrated") === "true" };
+  } catch (e) { return { x, error: "network: " + e.message, rtt: performance.now() - t0 }; }
+}
+function colorOf(x) { return COLORS[Math.min(TARGETS.indexOf(x), 2)]; }
+function probRows(entries, color, legend) {
+  let win = 0;
+  entries.forEach(([, p], i) => { if (p > entries[win][1]) win = i; });
+  return entries.map(([k, p], i) => `<div class="pb${i === win ? " win" : ""}"><span class="k" title="${esc(k)}">${esc(legend && legend[k] ? k + " · " + legend[k] : k)}</span><div class="tr"><div class="fl" style="width:${(p * 100).toFixed(1)}%;background:${color}"></div></div><span class="v">${p.toFixed(3)}</span></div>`).join("");
+}
+function renderAnswer(qid, q, a, color) {
+  if (!a) return `<div class="ans"><div class="ans-h"><span class="qn">${esc(qid)}</span></div><div class="conf">${t("noAnswer")}</div></div>`;
+  let top, body, conf = "";
+  if (a.type === "noul") { top = a.noul >= 0.5 ? "yes" : "no"; body = probRows([["yes", a.noul], ["no", 1 - a.noul]], color); }
+  else if (a.type === "choice") { top = a.choice; body = probRows(Object.entries(a.probabilities), color); conf = t("confidence") + " " + Number(a.confidence).toFixed(3); }
+  else {
+    const n = Object.keys(a.probabilities).length - 1;
+    top = Number(a.score).toFixed(2) + " / " + n;
+    body = probRows(Object.entries(a.probabilities), color, a.legend);
+    conf = t("expected") + " " + Number(a.score).toFixed(2) + " · " + t("confidence") + " " + Number(a.confidence).toFixed(3);
+  }
+  const ins = typeof q.instructions === "string" ? q.instructions : JSON.stringify(q.instructions);
+  return `<div class="ans"><div class="ans-h"><span class="qn">${esc(qid)}</span><span class="top">${esc(top)}</span></div><div class="ins">${esc(ins)}</div>${body}${conf ? `<div class="conf">${esc(conf)}</div>` : ""}</div>`;
+}
+function verdictLabel(ev) { return CURRENT && CURRENT.labels ? (ev.passed ? CURRENT.labels.pass : CURRENT.labels.fail) : ev.label; }
+function renderResults(results, questions, policy) {
+  LAST = results.map((r) => ({ target: r.x.name, model: r.model || r.x.model, error: r.error || null, latency_ms: r.server || null,
+    answers: r.data ? r.data.answers : null, policy: r.data && policy ? evaluatePolicy(policy, r.data.answers || {}) : null }));
+  $("results").innerHTML = `<div class="grid-res">${results.map((r, i) => {
+    const color = colorOf(r.x);
+    const head = `<div class="res-h"><div class="row1"><i class="dot" style="background:${color}"></i><span class="nm">${esc(r.x.name)}</span>${r.x.remote_api ? `<span class="tag api">${t("external")}</span>` : ""}${r.calibrated ? `<span class="tag">${t("calibrated")}</span>` : ""}</div>
+      <div class="meta"><span>${esc(r.model || r.x.model)}${r.x.adapter ? " + " + esc(r.x.adapter) : ""}</span><span>${r.server ? t("server") + " " + r.server.toFixed(0) + " ms · " : ""}${t("roundtrip")} ${r.rtt.toFixed(0)} ms</span></div></div>`;
+    if (r.error) return `<div class="res">${head}<div class="err">${esc(r.error)}</div></div>`;
+    const ev = LAST[i].policy;
+    const verdict = ev ? `<div class="verdict ${ev.passed ? "ok" : "no"}"><div class="k">${t("verdict")}</div><div class="lab">${esc(verdictLabel(ev))}</div><ul class="rules">${ev.rules.map((x) =>
+      `<li><span class="mk ${x.ok ? "y" : "n"}">${x.ok ? "PASS" : "FAIL"}</span><span>${esc(ruleText(x.rule))} <code>→ ${esc(x.detail)}</code></span></li>`).join("")}</ul></div>` : "";
+    const answers = r.data.answers || {};
+    return `<div class="res">${head}${verdict}<div class="res-b">${Object.keys(questions).map((qid) => renderAnswer(qid, questions[qid], answers[qid], color)).join("")}</div></div>`;
+  }).join("")}</div>`;
+  $("acts").innerHTML = LAST.map((x, i) => {
+    const color = colorOf(results[i].x);
+    if (x.error) return `<div class="act"><span class="who"><i class="dot" style="background:${color}"></i>${esc(x.target)}</span><span class="txt">${t("error")}</span></div>`;
+    const ok = x.policy ? x.policy.passed : null;
+    const txt = x.policy ? (CURRENT && CURRENT.act ? (ok ? CURRENT.act.pass : CURRENT.act.fail) : verdictLabel(x.policy)) : t("noPolicy");
+    return `<div class="act"><span class="who"><i class="dot" style="background:${color}"></i>${esc(x.target)}</span>${x.policy ? `<span class="pill ${ok ? "ok" : "no"}">${esc(verdictLabel(x.policy))}</span>` : ""}<span class="txt">${esc(txt)}</span><button type="button" class="ghost" data-copy="${i}">${t("copy")}</button></div>`;
+  }).join("");
+  document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+    const text = JSON.stringify(LAST[Number(b.dataset.copy)], null, 2);
+    try { await navigator.clipboard.writeText(text); b.textContent = t("copied"); }
+    catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); b.textContent = t("copied"); } finally { ta.remove(); } }
+  }));
+}
+async function run() {
+  const questions = toWire();
+  if (!Object.keys(questions).length) { $("results").innerHTML = `<div class="err">${t("needQ")}</div>`; return; }
+  let policy = null;
+  const ptxt = $("policy").value.trim();
+  if (ptxt) { try { policy = JSON.parse(ptxt); } catch (e) { $("results").innerHTML = `<div class="err">${esc(t("badPolicy") + e.message)}</div>`; return; } }
+  if (CURRENT) CURRENT.policy = policy;
+  const body = { model: "jev-latest", state: parseState(), questions };
+  const btn = $("run"); btn.disabled = true; btn.firstElementChild.textContent = t("running");
+  try { renderResults(await Promise.all(picked().map((x) => callTarget(x, body))), questions, policy); }
+  finally { btn.disabled = false; btn.firstElementChild.textContent = t("run"); }
+}
+
+/* ---------- boot ---------- */
+async function boot() {
+  lang = initialLang(); applyI18n();
+  const [tg, ps] = await Promise.all([fetch("/ui/api/targets").then((r) => r.json()), fetch("/ui/api/presets").then((r) => r.json())]);
+  TARGETS = tg.targets || []; PRESETS = ps.presets || [];
+  fillTargets(); fillPresets();
+  setMode(TARGETS.length >= 2 ? "compare" : "single");
+  loadPreset(PRESETS.length ? 0 : -1);
+}
+$("preset").addEventListener("change", (e) => loadPreset(Number(e.target.value)));
+$("state").addEventListener("input", refreshStateKind);
+$("mode-single").addEventListener("click", () => setMode("single"));
+$("mode-compare").addEventListener("click", () => setMode("compare"));
+$("target-a").addEventListener("change", updateApiNote);
+$("target-b").addEventListener("change", updateApiNote);
+$("run").addEventListener("click", run);
+document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } });
+document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+document.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => { QUESTIONS.push(blankQuestion(b.dataset.add)); renderQuestions(); }));
+boot().catch((e) => { $("results").innerHTML = `<div class="err">${esc(t("initFail") + e.message)}</div>`; });
+</script>
+</body>
+</html>

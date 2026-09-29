@@ -1,0 +1,63 @@
+{
+  "policy": {
+    "all": [
+      {"q": "action", "choice": "promote"},
+      {"q": "evidence", "score_gte": 2.5},
+      {"q": "correction", "noul_gte": 0.8}
+    ],
+    "pass_label": "promote",
+    "fail_label": "hold"
+  },
+  "locales": {
+    "en": {
+      "title": "Agent memory promotion",
+      "description": "Should a human correction from an agent run become long-term memory?",
+      "labels": {"pass": "Promote", "fail": "Hold"},
+      "state": {
+        "task": "Add support for quoted values to this environment-variable parser. Preserve # characters inside quoted values, add regression tests, and run the full test file.",
+        "human_correction": "One more rule to preserve: an escaped quote inside a quoted value must not close the quoted section. Add regression tests for escaped quotes, fix the implementation if needed, and rerun the full test file.",
+        "timeline": [
+          "Captured 2 user messages and 50 trace events",
+          "Captured a follow-up engineering correction",
+          "The agent modified the parser and its regression tests",
+          "The agent reran the test suite after the correction"
+        ]
+      },
+      "questions": {
+        "action": {"type": "choice", "instructions": "What should happen to this correction?",
+          "criteria": {"promote": "Store it as a reusable memory for future runs", "hold": "Keep it for review; not clearly reusable yet", "discard": "One-off instruction with no future value"}},
+        "evidence": {"type": "score", "instructions": "How strongly does the trace show the correction was applied and verified?",
+          "criteria": ["No evidence", "Weak", "Partial", "Strong", "Conclusive"]},
+        "reuse": {"type": "score", "instructions": "How likely is this rule to matter again in future tasks?",
+          "criteria": ["Never", "Unlikely", "Possible", "Likely", "Certain"]},
+        "correction": {"type": "noul", "instructions": "Is the human message a durable engineering rule rather than a one-time request?"}
+      },
+      "act": {"pass": "Store the correction and its evidence as a local memory.", "fail": "Keep it in the review queue; nothing is stored."}
+    },
+    "ko": {
+      "title": "에이전트 메모리 승격",
+      "description": "에이전트 실행 중 사람이 준 교정을 장기 메모리로 남길지 판단함.",
+      "labels": {"pass": "승격", "fail": "보류"},
+      "state": {
+        "작업": "환경변수 파서에 따옴표 값 지원을 추가하고, 따옴표 안의 # 문자를 보존하며, 회귀 테스트를 추가한 뒤 전체 테스트 파일을 실행할 것.",
+        "사람의_교정": "보존해야 할 규칙이 하나 더 있음: 따옴표 값 안의 이스케이프된 따옴표는 따옴표 구간을 닫으면 안 됨. 이스케이프 따옴표 회귀 테스트를 추가하고 필요하면 구현을 고친 뒤 전체 테스트를 다시 실행할 것.",
+        "타임라인": [
+          "사용자 메시지 2개와 추적 이벤트 50개 수집",
+          "후속 엔지니어링 교정 수집",
+          "에이전트가 파서와 회귀 테스트를 수정",
+          "교정 뒤 에이전트가 테스트 스위트를 다시 실행"
+        ]
+      },
+      "questions": {
+        "action": {"type": "choice", "instructions": "이 교정을 어떻게 처리할 것인가?",
+          "criteria": {"promote": "이후 실행에 재사용할 메모리로 저장", "hold": "검토 대기. 재사용 가치가 아직 불분명", "discard": "일회성 지시로 재사용 가치 없음"}},
+        "evidence": {"type": "score", "instructions": "교정이 적용되고 검증되었다는 근거가 추적 기록에 얼마나 분명한가?",
+          "criteria": ["근거 없음", "약함", "일부", "강함", "확정적"]},
+        "reuse": {"type": "score", "instructions": "이 규칙이 이후 작업에서 다시 필요할 가능성은?",
+          "criteria": ["전혀 없음", "낮음", "있음", "높음", "확실"]},
+        "correction": {"type": "noul", "instructions": "사람의 메시지가 일회성 요청이 아니라 지속적인 엔지니어링 규칙인가?"}
+      },
+      "act": {"pass": "교정과 근거를 로컬 메모리로 저장함.", "fail": "검토 대기열에 두고 저장하지 않음."}
+    }
+  }
+}
