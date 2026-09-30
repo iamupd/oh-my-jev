@@ -148,6 +148,7 @@ def test_serve_valid_adapter_dir_starts_normally(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # REQ-012
+    pytest.importorskip("torch", reason="validating an adapter directory needs the semif extra")
     calls = _fake_run(monkeypatch)
     adapter_dir = _adapter_dir(tmp_path)
 
@@ -196,6 +197,7 @@ def test_bench_nonexistent_adapter_dir_exits_one_with_e_backend(tmp_path: Path) 
 
 def test_bench_mock_backend_ignores_adapter_but_reports_backend_model_id(tmp_path: Path) -> None:
     # REQ-012
+    pytest.importorskip("torch", reason="validating an adapter directory needs the semif extra")
     adapter_dir = _adapter_dir(tmp_path)
     out_dir = tmp_path / "run"
 

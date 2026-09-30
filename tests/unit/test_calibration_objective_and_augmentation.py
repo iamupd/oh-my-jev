@@ -6,7 +6,8 @@ import collections
 import random
 
 import pytest
-import torch
+
+torch = pytest.importorskip("torch", reason="training tests need the semif extra (uv sync --extra semif)")
 
 from omj.bench.suites import load_suite
 from omj.train.loss import restricted_brier

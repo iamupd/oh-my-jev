@@ -13,7 +13,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![Release](https://img.shields.io/badge/release-v0.1.0-2ea44f)](https://github.com/iamupd/oh-my-jev/releases)
+[![Release](https://img.shields.io/badge/release-v0.1.1-2ea44f)](https://github.com/iamupd/oh-my-jev/releases)
 [![TypeSafe compatible](https://img.shields.io/badge/API-TypeSafe%20%2Fv1%2Fsystemone-6f42c1)](#typesafe-sdk로-연결)
 
 [빠른 시작](#빠른-시작) · [명령](#명령) · [스위트](#벤치마크-스위트) · [학습](#판단-모델-직접-학습) · [알려진 제한](#알려진-제한) · [English](README.md)

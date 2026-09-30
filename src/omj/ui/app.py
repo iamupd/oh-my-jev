@@ -28,6 +28,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from omj.gateway.schema import SchemaError, parse_request
 from omj.ui.policy import PolicyError, validate_policy
 from omj.ui.targets import TargetSpec
+from omj import __version__
 
 UI_DIR = Path(__file__).resolve().parent
 STATIC_DIR = UI_DIR / "static"
@@ -120,7 +121,7 @@ def create_ui_app(
     presets = load_presets(presets_dir)
     info = [_target_info(spec, app) for spec, app in targets]
 
-    root = FastAPI(title="oh-my-jev ui", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
+    root = FastAPI(title="oh-my-jev ui", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
 
     if access_code:
         @root.middleware("http")

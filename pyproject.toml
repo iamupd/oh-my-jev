@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "oh-my-jev"
-version = "0.1.0"
+version = "0.1.1"
 description = "Run open System One decision models behind a TypeSafe-Jev-compatible gateway."
 readme = "README.md"
 license = "Apache-2.0"
@@ -45,6 +45,7 @@ packages = ["src/omj"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-m 'not gpu and not live' -q"
 markers = [
     "gpu: requires a CUDA GPU",

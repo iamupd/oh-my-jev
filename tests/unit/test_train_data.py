@@ -16,7 +16,9 @@ from typing import Any
 
 import pytest
 
-from omj.bench.suites import massive as massive_suite
+pytest.importorskip("torch", reason="training tests need the semif extra (uv sync --extra semif)")
+
+from omj.bench.suites import massive as massive_suite  # noqa: E402
 from omj.errors import ErrorCode, OmjError
 from omj.train import data
 from omj.train.recipe import DataSection, LoraSection, Recipe, TrainSection
