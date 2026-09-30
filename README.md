@@ -13,7 +13,7 @@ Try *System One* decision models in a web playground, measure accuracy and calib
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![Release](https://img.shields.io/badge/release-v0.1.0-2ea44f)](https://github.com/iamupd/oh-my-jev/releases)
+[![Release](https://img.shields.io/badge/release-v0.1.1-2ea44f)](https://github.com/iamupd/oh-my-jev/releases)
 [![TypeSafe compatible](https://img.shields.io/badge/API-TypeSafe%20%2Fv1%2Fsystemone-6f42c1)](#use-it-from-the-typesafe-sdk)
 
 [Quick start](#quick-start) · [Commands](#commands) · [Suites](#benchmark-suites) · [Train](#train-your-own-decision-model) · [Limitations](#known-limitations) · [한국어](README.ko.md)

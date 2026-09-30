@@ -10,7 +10,9 @@ from typing import Any
 
 import pytest
 
-from omj.errors import OmjError
+pytest.importorskip("torch", reason="training tests need the semif extra (uv sync --extra semif)")
+
+from omj.errors import OmjError  # noqa: E402
 from omj.train import data, sources
 from omj.train.recipe import DataSection, LoraSection, MixSource, Recipe, TrainSection, load_recipe
 from tests.unit.test_train_data import tokenizer  # noqa: F401  (fixture re-export)

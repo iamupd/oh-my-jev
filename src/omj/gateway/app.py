@@ -25,6 +25,7 @@ from omj.gateway.decision_log import DecisionLogger, DecisionLogRow, state_sha25
 from omj.gateway.schema import SchemaError, Question, answer_keys, check_token_budget, parse_request
 from omj.gateway.usage import compute_usage
 from omj.logging_setup import setup_logging
+from omj import __version__
 
 logger = logging.getLogger("omj.gateway")
 
@@ -297,7 +298,7 @@ def create_app(
             }
         )
 
-    app = FastAPI(title="oh-my-jev gateway", version="0.1.0")
+    app = FastAPI(title="oh-my-jev gateway", version=__version__)
     for index, path in enumerate(SYSTEMONE_PATHS):
         app.add_api_route(
             path,
