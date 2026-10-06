@@ -31,6 +31,15 @@ def _build_labels(limit: int = MAX_LABELS) -> list[str]:
 LABELS: list[str] = _build_labels()
 
 
+def _describe(description: object, fallback: str) -> str:
+    """Option text as shown in the prompt: strings verbatim, null as ``fallback``, other JSON values as one-line JSON."""
+    if isinstance(description, str):
+        return description
+    if description is None:
+        return fallback
+    return render_state(description)
+
+
 def question_options(question: dict) -> list[tuple[str, str]]:
     """Return the (answer key, option text) pairs a question offers, in wire order."""
     kind: Kind = question["type"]
@@ -41,13 +50,13 @@ def question_options(question: dict) -> list[tuple[str, str]]:
         # every question kind; the gateway turns p(yes) back into the noul field.
         pairs = criteria if isinstance(criteria, dict) else {}
         return [
-            ("yes", pairs.get("true") or NOUL_TRUE_FALLBACK),
-            ("no", pairs.get("false") or NOUL_FALSE_FALLBACK),
+            ("yes", _describe(pairs.get("true") or None, NOUL_TRUE_FALLBACK)),
+            ("no", _describe(pairs.get("false") or None, NOUL_FALSE_FALLBACK)),
         ]
     if kind == "choice":
         if not isinstance(criteria, dict):
             raise ValueError("choice criteria must be an object mapping option id to description")
-        return [(key, text) for key, text in criteria.items()]
+        return [(key, _describe(text, key)) for key, text in criteria.items()]
     if kind == "score":
         if not isinstance(criteria, list):
             raise ValueError("score criteria must be a list of level descriptions")
@@ -70,7 +79,8 @@ def render_question(
     options = question_options(question)
     if len(options) > len(available):
         raise ValueError(
-            f"question has {len(options)} options but only {len(available)} usable labels"
+            f"question has {len(options)} options but only {len(available)} usable labels "
+            "(options per choice limit)"
         )
 
     kind: Kind = question["type"]

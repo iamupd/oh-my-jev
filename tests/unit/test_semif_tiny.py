@@ -171,3 +171,40 @@ def test_count_tokens_reports_the_longest_prompt(backend: SemifBackend) -> None:
     ]
     assert total == max(per_question)
     assert total > 0
+
+
+def test_forward_runs_without_a_kv_cache(backend: SemifBackend, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A single prefill per prompt: a KV cache would only hold device memory.
+    seen: list[object] = []
+    original = backend._model.forward
+
+    def spy(*args: Any, **kwargs: Any) -> Any:
+        seen.append(kwargs.get("use_cache"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(backend._model, "forward", spy)
+    backend.decide(STATE, QUESTIONS)
+    assert seen and all(value is False for value in seen)
+
+
+def test_out_of_memory_batch_is_split_and_still_answered(
+    backend: SemifBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = backend.decide(STATE, QUESTIONS)
+    original = backend._model.forward
+    batch_sizes: list[int] = []
+
+    def tight_memory(*args: Any, **kwargs: Any) -> Any:
+        batch_sizes.append(int(kwargs["input_ids"].shape[0]))
+        if kwargs["input_ids"].shape[0] > 1:
+            raise torch.cuda.OutOfMemoryError("CUDA out of memory (simulated)")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(backend._model, "forward", tight_memory)
+    answers = backend.decide(STATE, QUESTIONS)
+
+    assert batch_sizes[0] == len(QUESTIONS)
+    assert set(answers) == set(QUESTIONS)
+    for qid in QUESTIONS:
+        for left, right in zip(expected[qid].logits, answers[qid].logits):
+            assert left == pytest.approx(right, abs=1e-4)

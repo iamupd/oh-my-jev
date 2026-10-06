@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 import tomli_w
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from omj.errors import ErrorCode, OmjError
 
@@ -34,6 +34,9 @@ class BackendSection(BaseModel):
     adapter: str = ""
     quant: Literal["bf16", "4bit-prequant", "nf4"] = "bf16"
     calibration: str = ""
+    # semif only. Longest single prompt accepted, in tokens; None keeps the 4096 default.
+    # Never above the model's declared max_position_embeddings.
+    max_state_tokens: int | None = Field(default=None, ge=1)
     kev_base_url: str = "http://127.0.0.1:8009"
     provider: Literal["typesafe", "openrouter"] = "typesafe"
     api_key_env: str = ""

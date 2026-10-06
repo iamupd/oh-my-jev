@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
@@ -23,7 +23,8 @@ class SchemaError(Exception):
 class Question(BaseModel):
     type: Literal["noul", "choice", "score"]
     instructions: str | dict | list
-    criteria: dict[str, str] | list[str] | None = None
+    # A choice option's description may be any JSON value (a chess move object, a colour list, ...).
+    criteria: dict[str, Any] | list[str] | None = None
 
     @model_validator(mode="after")
     def _validate_shape(self) -> Question:
@@ -47,9 +48,6 @@ class Question(BaseModel):
                 raise ValueError(
                     f"choice criteria must have between 2 and 255 entries, got {len(self.criteria)}"
                 )
-            for key, value in self.criteria.items():
-                if not isinstance(value, str):
-                    raise ValueError(f"choice criteria value for {key!r} must be a string")
         elif self.type == "score":
             if not isinstance(self.criteria, list):
                 raise ValueError("score criteria must be a list of level descriptions")
@@ -95,7 +93,8 @@ def check_token_budget(n_tokens: int, max_tokens: int) -> None:
     if n_tokens > max_tokens:
         raise SchemaError(
             "context_length_exceeded",
-            f"request uses {n_tokens} tokens, exceeding the backend limit of {max_tokens}",
+            f"request uses {n_tokens} tokens, exceeding the backend limit of {max_tokens} "
+            "(maximum context length)",
         )
 
 

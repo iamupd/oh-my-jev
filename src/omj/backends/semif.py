@@ -8,6 +8,7 @@ question B's distribution (REQ-024) and gives the gateway raw logits to calibrat
 
 from __future__ import annotations
 
+import gc
 import inspect
 import logging
 import re
@@ -35,8 +36,52 @@ from omj.models.download import download_model
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 16
+# A batch is padded to its longest prompt; this caps prompts x longest so long prompts get smaller batches.
+MAX_BATCH_TOKENS = 32768
 DEFAULT_MAX_STATE_TOKENS = 4096
 MIN_SINGLE_TOKEN_LABELS = 2
+_OOM_ERRORS: tuple[type[BaseException], ...] = tuple(
+    {error for error in (getattr(torch, "OutOfMemoryError", None), getattr(torch.cuda, "OutOfMemoryError", None)) if error}
+)
+
+
+def token_budget_batches(
+    lengths: list[int], max_batch: int = BATCH_SIZE, max_tokens: int = MAX_BATCH_TOKENS
+) -> list[list[int]]:
+    """Group prompt indices, in order, into batches of at most ``max_batch`` prompts whose padded size
+    (prompts x longest) stays within ``max_tokens``. A prompt longer than ``max_tokens`` runs alone."""
+    batches: list[list[int]] = []
+    current: list[int] = []
+    longest = 0
+    for index, length in enumerate(lengths):
+        if current and (len(current) >= max_batch or max(longest, length) * (len(current) + 1) > max_tokens):
+            batches.append(current)
+            current, longest = [], 0
+        current.append(index)
+        longest = max(longest, length)
+    if current:
+        batches.append(current)
+    return batches
+
+
+def forward_with_oom_split(chunk: list, forward, *, oom_errors: tuple, release) -> dict:
+    """Run ``forward(chunk)``; when the device runs out of memory, free it and retry each half, down to single
+    prompts. A single prompt that still does not fit is refused as this device's capacity limit."""
+    try:
+        return forward(chunk)
+    except oom_errors:
+        # Leave the except block before releasing: its traceback pins the activations that filled the device.
+        pass
+    release()
+    if len(chunk) == 1:
+        raise OmjError(
+            ErrorCode.E_BACKEND,
+            "prompt does not fit in this device's memory (maximum context length on this device)",
+        )
+    middle = len(chunk) // 2
+    answers = forward_with_oom_split(chunk[:middle], forward, oom_errors=oom_errors, release=release)
+    answers.update(forward_with_oom_split(chunk[middle:], forward, oom_errors=oom_errors, release=release))
+    return answers
 
 
 def validate_adapter_dir(path: str | Path) -> Path:
@@ -184,11 +229,16 @@ def _supports_logits_to_keep(model: Any) -> bool:
         return False
 
 
-def _max_state_tokens(model: Any) -> int:
-    declared = getattr(getattr(model, "config", None), "max_position_embeddings", None)
-    if isinstance(declared, int) and 0 < declared < DEFAULT_MAX_STATE_TOKENS:
+def _max_state_tokens(model: Any, requested: int | None = None) -> int:
+    config = getattr(model, "config", None)
+    declared = getattr(config, "max_position_embeddings", None)
+    if not isinstance(declared, int) or declared <= 0:
+        # Multimodal checkpoints keep the text limit in a nested config.
+        declared = getattr(getattr(config, "text_config", None), "max_position_embeddings", None)
+    limit = requested or DEFAULT_MAX_STATE_TOKENS
+    if isinstance(declared, int) and 0 < declared < limit:
         return declared
-    return DEFAULT_MAX_STATE_TOKENS
+    return limit
 
 
 class SemifBackend:
@@ -245,17 +295,18 @@ class SemifBackend:
         self._device = self._device or _infer_device(self._model)
         self.capabilities = Capabilities(
             max_options=len(labels),
-            max_state_tokens=_max_state_tokens(self._model),
+            max_state_tokens=_max_state_tokens(self._model, cfg.max_state_tokens),
             supports_batch=True,
             calibrated=False,
             device=self._device,
         )
         self._loaded = True
         logger.info(
-            "semif loaded %s on %s with %d single-token labels",
+            "semif loaded %s on %s with %d single-token labels, max_state_tokens=%d",
             self.model_id,
             self._device,
             len(labels),
+            self.capabilities.max_state_tokens,
         )
 
     def render_prompt_text(
@@ -281,10 +332,25 @@ class SemifBackend:
         for qid, question in questions.items():
             rendered.append((qid, question["type"], self._render(qid, state, question)))
 
+        lengths = [
+            len(self._tokenizer.encode(item[2].text, add_special_tokens=False)) for item in rendered
+        ]
         answers: dict[str, RawAnswer] = {}
-        for start in range(0, len(rendered), BATCH_SIZE):
-            answers.update(self._forward_chunk(rendered[start : start + BATCH_SIZE]))
+        for batch in token_budget_batches(lengths):
+            answers.update(
+                forward_with_oom_split(
+                    [rendered[index] for index in batch],
+                    self._forward_chunk,
+                    oom_errors=_OOM_ERRORS,
+                    release=self._release_memory,
+                )
+            )
         return answers
+
+    def _release_memory(self) -> None:
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def health(self) -> Health:
         if not self._loaded:
@@ -417,7 +483,8 @@ class SemifBackend:
         input_ids = encoded["input_ids"].to(device)
         attention_mask = encoded["attention_mask"].to(device)
 
-        forward_kwargs: dict[str, Any] = {}
+        # One prefill per prompt and no generation, so a KV cache would only hold memory.
+        forward_kwargs: dict[str, Any] = {"use_cache": False}
         if self._last_position_only:
             forward_kwargs["logits_to_keep"] = 1
         with torch.no_grad():

@@ -162,6 +162,7 @@ uv run omj serve
 
 - `--no-download`를 주면 가중치는 받지 않고 설정만 저장합니다.
 - bf16으로 GPU에 들어가지 않는 모델은 자동으로 4-bit(nf4)로 로드합니다. 직접 정하려면 `uv run omj init --quant nf4`를 쓰세요.
+- `omj serve`는 4,096토큰보다 긴 프롬프트를 HTTP 422(`context_length_exceeded`)로 거절합니다. 한도를 올리려면 `config.toml`의 `[backend]`에 `max_state_tokens`를 지정하세요. 모델 자체 한도까지 올릴 수 있습니다.
 
 ## Hugging Face 모델 벤치마크
 
@@ -222,7 +223,7 @@ uv run omj ui --target semif --target typesafe                            # 내 
 |---|---|
 | `id` | 줄마다 고유한 값 |
 | `state` | 상황. 텍스트나 임의의 JSON 객체 |
-| `questions` | 질문 하나 이상. `choice`: `criteria`에 선택지 키와 설명을 담은 사전. `noul`: 예/아니오 질문(`true`/`false` 설명을 담은 `criteria`는 선택). `score`: `criteria`에 0부터 시작하는 단계별 설명 목록 |
+| `questions` | 질문 하나 이상. `choice`: `criteria`에 선택지 키와 설명을 담은 사전(설명은 텍스트 또는 JSON 값이며, JSON 값은 프롬프트에 한 줄 JSON으로 표시됩니다). `noul`: 예/아니오 질문(`true`/`false` 설명을 담은 `criteria`는 선택). `score`: `criteria`에 0부터 시작하는 단계별 설명 목록 |
 | `expected` | 질문별 정답: 선택지 키, `yes`/`no`, 또는 단계 번호(문자열). 정답이 없는 질문은 학습에서 빠지고, bench에서는 정답 없는 문항으로 처리됨 |
 | `tags` | 선택 사항. 보고서에서 태그별 정확도를 보여 줌 |
 

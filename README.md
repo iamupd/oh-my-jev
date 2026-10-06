@@ -158,6 +158,7 @@ uv run omj serve
 
 - `--no-download` writes the config without fetching weights.
 - A model that would not fit the GPU in bf16 is loaded in 4-bit (nf4) automatically; `uv run omj init --quant nf4` forces it.
+- `omj serve` refuses a prompt longer than 4,096 tokens with HTTP 422 (`context_length_exceeded`). Set `max_state_tokens` under `[backend]` in `config.toml` to raise it, up to the model's own limit.
 
 ## Benchmark any Hugging Face model
 
@@ -218,7 +219,7 @@ Write your decisions as JSONL: **one JSON object per line**, one line per situat
 |---|---|
 | `id` | Unique per line |
 | `state` | The situation: text, or any JSON object |
-| `questions` | One or more questions. `choice`: `criteria` maps each option key to a description. `noul`: a yes/no question (optional `criteria` with `true` / `false` descriptions). `score`: `criteria` lists one description per level, from 0 up |
+| `questions` | One or more questions. `choice`: `criteria` maps each option key to a description (text, or any JSON value, which the prompt shows as one-line JSON). `noul`: a yes/no question (optional `criteria` with `true` / `false` descriptions). `score`: `criteria` lists one description per level, from 0 up |
 | `expected` | The right answer per question: an option key, `yes` / `no`, or the level number as a string. Questions without one are skipped in training and scored as unlabelled in bench |
 | `tags` | Optional labels; the report breaks accuracy down by them |
 
