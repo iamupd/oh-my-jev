@@ -256,6 +256,9 @@ class SemifBackend:
         self._tokenizer = tokenizer
         self._device = device
         self._last_position_only = False
+        self._readout = None
+        self._readout_rows: dict[int, int] = {}
+        self._model_dir: Path | None = None
         self._loaded = False
         self.model_id = "semif"
         self.capabilities = Capabilities(
@@ -278,6 +281,7 @@ class SemifBackend:
 
         if cfg.adapter:
             self._merge_adapter(cfg.adapter)
+        self._load_structure([Path(cfg.adapter)] if cfg.adapter else [])
 
         self._prepare_tokenizer()
 
@@ -377,6 +381,26 @@ class SemifBackend:
         except ValueError as exc:
             raise OmjError(ErrorCode.E_BACKEND, f"question {qid!r}: {exc}") from exc
 
+    def _load_structure(self, adapter_dirs: list[Path]) -> None:
+        """Enable a noncausal readout when decision_config.json sits in the adapter or the model directory."""
+        from omj.structure import CONFIG_FILE, enable_noncausal, load_readout
+
+        candidates = [*adapter_dirs, *([self._model_dir] if self._model_dir else [])]
+        source = next((d for d in candidates if (d / CONFIG_FILE).is_file()), None)
+        if source is None:
+            return
+        try:
+            head, table, structure = load_readout(source)
+            if structure != "noncausal_readout":
+                return
+            head = head.to(_infer_device(self._model)).eval()
+            enable_noncausal(self._model)
+        except Exception as exc:
+            raise OmjError(ErrorCode.E_BACKEND, f"could not load readout head from {source}: {exc}") from exc
+        self._readout = head
+        self._readout_rows = {int(token): row for row, token in enumerate(table)}
+        logger.info("semif noncausal readout enabled from %s (%d options)", source, len(table))
+
     def _merge_adapter(self, adapter: str) -> None:
         """Fold a LoRA adapter into the base weights so inference stays a plain forward (REQ-011)."""
         adapter_dir = validate_adapter_dir(adapter)
@@ -403,6 +427,7 @@ class SemifBackend:
 
     def _load_from_hub(self, cfg: BackendSection) -> None:
         path = download_model(cfg.model, cfg.revision, offline=cfg.offline)
+        self._model_dir = Path(path)
         cuda = torch.cuda.is_available()
 
         if cfg.quant == "4bit-prequant":
@@ -483,22 +508,34 @@ class SemifBackend:
         input_ids = encoded["input_ids"].to(device)
         attention_mask = encoded["attention_mask"].to(device)
 
-        # One prefill per prompt and no generation, so a KV cache would only hold memory.
-        forward_kwargs: dict[str, Any] = {"use_cache": False}
-        if self._last_position_only:
-            forward_kwargs["logits_to_keep"] = 1
-        with torch.no_grad():
-            outputs = self._model(
-                input_ids=input_ids, attention_mask=attention_mask, **forward_kwargs
-            )
-        last_logits = outputs.logits[:, -1, :].float()
+        if self._readout is not None:
+            from omj.structure import hidden_last
+
+            with torch.no_grad():
+                last_logits = self._readout(hidden_last(self._model, input_ids, attention_mask)).float()
+        else:
+            # One prefill per prompt and no generation, so a KV cache would only hold memory.
+            forward_kwargs: dict[str, Any] = {"use_cache": False}
+            if self._last_position_only:
+                forward_kwargs["logits_to_keep"] = 1
+            with torch.no_grad():
+                outputs = self._model(
+                    input_ids=input_ids, attention_mask=attention_mask, **forward_kwargs
+                )
+            last_logits = outputs.logits[:, -1, :].float()
         prompt_tokens = attention_mask.sum(dim=1).tolist()
 
         answers: dict[str, RawAnswer] = {}
         for row, (qid, kind, prompt) in enumerate(chunk):
-            index = torch.tensor(
-                prompt.label_token_ids, dtype=torch.long, device=last_logits.device
-            )
+            ids = prompt.label_token_ids
+            if self._readout is not None:
+                missing = [t for t in ids if t not in self._readout_rows]
+                if missing:
+                    raise OmjError(
+                        ErrorCode.E_BACKEND, f"label token ids {missing[:3]} are not in the readout head"
+                    )
+                ids = [self._readout_rows[t] for t in ids]
+            index = torch.tensor(ids, dtype=torch.long, device=last_logits.device)
             values = last_logits[row].index_select(0, index).tolist()
             answers[qid] = RawAnswer(
                 qid=qid,
